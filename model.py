@@ -8,7 +8,6 @@ from keras.optimizers import Adam, RMSprop, SGD
 from keras import backend as K
 from utils import *
 
-NUM_ACTIONS = 2
 
 class DQN:
     def __init__(self, state_shape, num_actions, learning_rate):
