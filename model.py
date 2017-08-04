@@ -24,11 +24,19 @@ class DQN:
         states = Input(shape=(self.state_shape))
         actions = Input(shape=(1,), dtype='int32')
 
-        # Model architecture 
-        output = Dense(self.num_actions)(states)
+        # # Model architecture 
+        # net = Conv2D(32, (8, 8), strides=(4, 4), activation='relu')(states)
+        # net = Conv2D(64, (4, 4), strides=(2, 2), activation='relu')(net)
+        # net = Conv2D(64, (3, 3), strides=(1, 1), activation='relu')(net)
+
+        net = states
+        net = Flatten()(net)
+        # net = Dense(512, activation='relu')(net)
+
+        output = Dense(self.num_actions)(net)
 
         model = Model(inputs=[states, actions], outputs=output, name='predictions')
-        model.compile(optimizer=SGD(self.lr), loss=mask_loss(actions, self.num_actions))
+        model.compile(optimizer=Adam(self.lr), loss=mask_loss(actions, self.num_actions))
 
         return model
 
@@ -36,24 +44,6 @@ class DQN:
         fake_actions = np.zeros(len(states))
         return self.model.predict([states, fake_actions])
 
-    def fit(self, states, actions, labels, epochs=1):
-        self.model.fit([states, actions], labels, epochs=epochs)
-    
-fake_inputs = np.random.random((1, 4))
-fake_labels = np.random.random((1, 1))
-fake_labels = np.array([(5)])
-# fake_actions = np.random.randint(0, 1, 2, np.int32)
-fake_actions = np.array([0])
+    def fit(self, states, actions, labels, epochs=1, verbose=1):
+        self.model.fit([states, actions], labels, epochs=epochs, verbose=verbose)
 
-model = DQN(state_shape=(4,), num_actions=2, learning_rate=1e-1)
-
-old_preds = model.predict(fake_inputs)
-
-model.fit(fake_inputs, fake_actions, fake_labels, epochs=200)
-
-# h = model.model.fit([fake_inputs, fake_actions], fake_labels, epochs=200)
-
-new_preds = model.predict(fake_inputs)
-print('Original: {}'.format(fake_labels))
-print('Old preds: {}'.format(old_preds))
-print('New preds {}'.format(new_preds))
