@@ -18,8 +18,10 @@ class DQN:
 
         if len(state_shape) == 3:
             self.model = self._build_deepmind_model()
+            self.target = self._build_deepmind_model()
         elif len(state_shape) == 1:
             self.model = self._build_dense_model()
+            self.target = self._build_dense_model()
         else:
             raise ValueError('state_shape not supported')
 
@@ -70,4 +72,12 @@ class DQN:
 
     def fit(self, states, actions, labels, epochs=1, verbose=1):
         self.model.fit([states, actions], labels, epochs=epochs, verbose=verbose)
+
+    def target_predict(self, states):
+        fake_actions = np.zeros(len(states))
+        return self.target.predict([states, fake_actions])
+
+    def target_update(self):
+        self.target.set_weights(self.model.get_weights())
+
 

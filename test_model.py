@@ -19,9 +19,14 @@ for i_action in range(NUM_ACTIONS):
     fake_actions = np.array([i_action] * NUM_ACTIONS)
 
     old_preds = model.predict(fake_inputs)
+    old_target_preds = model.target_predict(fake_inputs)
     model.fit(fake_inputs, fake_actions, fake_labels, epochs=100, verbose=0)
     new_preds = model.predict(fake_inputs)
+    model.target_update()
+    new_target_preds = model.target_predict(fake_inputs)
 
     print('\nAction {} | Original: {}'.format(i_action, fake_labels))
     print('Old preds:\n{}'.format(old_preds))
+    print('Old target preds:\n{}'.format(old_target_preds))
     print('New preds:\n{}'.format(new_preds))
+    print('New target preds:\n{}'.format(new_target_preds))
