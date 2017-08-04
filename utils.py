@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from collections import deque
 import tensorflow as tf
 from keras import backend as K
@@ -12,7 +13,8 @@ class SimpleReplayBuffer:
         self.memory.append((state, action, reward, done, next_state))
 
     def sample(self, batch_size=32):
-        return zip(*random.sample(self.memory, batch_size))
+        batch = random.sample(self.memory, batch_size)
+        return map(np.array, zip(*batch))
 
 
 def mask_loss(actions, num_actions):
@@ -37,3 +39,25 @@ def huber_loss(y_true, y_pred, delta=1):
     squared_error = 0.5 * K.square(error)
     linear_error = delta * (K.abs(error) - 0.5 * delta)
     return tf.where(condition, squared_error, linear_error)
+
+
+def get_epsilon_op(final_epsilon, stop_exploration):
+    ''' Return an function that calculates epsilon based on the step '''
+    epsilon_step = - np.log(final_epsilon) / stop_exploration
+
+    def get_epsilon(step):
+        if step <= stop_exploration:
+            return np.exp(-epsilon_step * step)
+        else:
+            return final_epsilon
+
+    return get_epsilon
+
+
+def egreedy_police(Q_values, epsilon):
+    ''' Choose an action based on a egreedy police '''
+    if np.random.random() <= epsilon:
+        num_actions = len(np.squeeze(Q_values))
+        return np.random.choice(np.arange(num_actions))
+    else:
+        return np.argmax(np.squeeze(Q_values))
