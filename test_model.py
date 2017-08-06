@@ -1,18 +1,18 @@
 import numpy as np
 from model import DQN
 
-STATE_SHAPE = [84, 84, 1]
-NUM_ACTIONS = 3
-LEARNING_RATE = 1e-3
-
-# STATE_SHAPE = [4]
+# STATE_SHAPE = [84, 84, 1]
 # NUM_ACTIONS = 3
-# # A higher learning rate can be used for simple envs
-# LEARNING_RATE = 1e-2
+# LEARNING_RATE = 1e-3
+
+STATE_SHAPE = [8]
+NUM_ACTIONS = 3
+# A higher learning rate can be used for simple envs
+LEARNING_RATE = 1e-2
 
 for i_action in range(NUM_ACTIONS):
 
-    model = DQN(STATE_SHAPE, NUM_ACTIONS, LEARNING_RATE)
+    model = DQN(STATE_SHAPE, NUM_ACTIONS, LEARNING_RATE, use_huber=True)
 
     fake_inputs = np.random.random([NUM_ACTIONS] + STATE_SHAPE)
     fake_labels = np.arange(1, NUM_ACTIONS + 1) * 2
@@ -20,7 +20,8 @@ for i_action in range(NUM_ACTIONS):
 
     old_preds = model.predict(fake_inputs)
     old_target_preds = model.target_predict(fake_inputs)
-    model.fit(fake_inputs, fake_actions, fake_labels, epochs=100, verbose=0)
+    for _ in range(100):
+        model.fit(fake_inputs, fake_actions, fake_labels)
     new_preds = model.predict(fake_inputs)
     model.target_update()
     new_target_preds = model.target_predict(fake_inputs)

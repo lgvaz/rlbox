@@ -17,19 +17,22 @@ class SimpleReplayBuffer:
         return map(np.array, zip(*batch))
 
 
-def mask_loss(actions, num_actions):
+def mask_loss(actions, num_actions, huber=True):
     '''
     The target only corresponds to the selected action,
     so the error must be masked to only inclued the loss from the chosen action
     '''
     def loss(y_true, y_pred):
         onehot_actions = K.one_hot(actions, num_actions)
-        errors = huber_loss(y_true, y_pred)
+        if huber:
+            errors = huber_loss(y_true, y_pred)
+        else:
+            errors = mean_squared_loss(y_true, y_pred)
         return K.mean(onehot_actions * errors)
     return loss
 
 
-def huber_loss(y_true, y_pred, delta=1):
+def huber_loss(y_true, y_pred, delta=1.):
     '''
     Hubber loss is less sensitive to outliers
     https://en.wikipedia.org/wiki/Huber_loss
@@ -39,6 +42,10 @@ def huber_loss(y_true, y_pred, delta=1):
     squared_error = 0.5 * K.square(error)
     linear_error = delta * (K.abs(error) - 0.5 * delta)
     return tf.where(condition, squared_error, linear_error)
+
+def mean_squared_loss(y_true, y_pred):
+    error = y_true - y_pred
+    return 0.5 * K.square(error)
 
 
 def get_epsilon_op(final_epsilon, stop_exploration):
@@ -61,3 +68,15 @@ def egreedy_police(Q_values, epsilon):
         return np.random.choice(np.arange(num_actions))
     else:
         return np.argmax(np.squeeze(Q_values))
+
+
+def create_summary(logdir='logs/'):
+    writer = tf.summary.FileWriter(logdir)
+
+    def write_value(name, value, step):
+        summary = tf.Summary(value=[
+            tf.Summary.Value(tag=name, simple_value=value),
+        ])
+        writer.add_summary(summary, step)
+
+    return write_value

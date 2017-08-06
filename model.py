@@ -10,10 +10,11 @@ from utils import *
 
 
 class DQN:
-    def __init__(self, state_shape, num_actions, learning_rate):
+    def __init__(self, state_shape, num_actions, learning_rate, use_huber=True):
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.lr = learning_rate
+        self.use_huber = use_huber
 
         if len(state_shape) == 3:
             self.model = self._build_deepmind_model()
@@ -56,12 +57,13 @@ class DQN:
 
         # Model architecture
         net = states
-        net = Dense(64, activation='relu')(net)
+        net = Dense(512, activation='relu')(net)
         # net = Dense(64, activation='relu')(net)
         output = Dense(self.num_actions)(net)
 
         model = Model(inputs=[states, actions], outputs=output, name='predictions')
-        model.compile(optimizer=Adam(self.lr), loss=mask_loss(actions, self.num_actions))
+        model.compile(optimizer=Adam(self.lr),
+                      loss=mask_loss(actions, self.num_actions, huber=self.use_huber))
 
         return model
 
@@ -69,8 +71,10 @@ class DQN:
         fake_actions = np.zeros(len(states))
         return self.model.predict([states, fake_actions])
 
-    def fit(self, states, actions, labels, epochs=1, verbose=1):
-        self.model.fit([states, actions], labels, epochs=epochs, verbose=verbose)
+    def fit(self, states, actions, labels):
+        # self.model.fit([states, actions], labels, batch_size=batch_size, epochs=epochs, verbose=verbose)
+        loss = self.model.train_on_batch([states, actions], labels)
+        return loss
 
     def target_predict(self, states):
         fake_actions = np.zeros(len(states))
