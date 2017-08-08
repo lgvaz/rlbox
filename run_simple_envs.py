@@ -5,7 +5,6 @@ from utils import SimpleReplayBuffer, get_epsilon_op, egreedy_police, create_sum
 from model import DQN
 
 
-
 # # Constants
 # ENV_NAME = 'CartPole-v0'
 # LEARNING_RATE = 1e-3
@@ -69,6 +68,7 @@ summary = create_summary(LOG_DIR)
 reward_sum = 0
 rewards = []
 losses = []
+# TODO: Track and plot Q values (verify with openai baselines)
 for i_step in range(1, NUM_TIMESTEPS + 1):
     # env.render()
     # Choose an action
