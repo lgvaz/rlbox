@@ -6,35 +6,35 @@ from model import DQN
 
 
 
-# Constants
-ENV_NAME = 'CartPole-v0'
-LEARNING_RATE = 1e-3
-USE_HUBER = True
-NUM_TIMESTEPS = int(1e7)
-BATCH_SIZE = 64
-GAMMA = .99
-UPDATE_TARGET_STEPS = int(5000)
-FINAL_EPSILON = 0.01
-STOP_EXPLORATION = int(30000)
-LOG_STEPS = int(1000)
-MAX_REPLAYS = int(100000)
-MIN_REPLAYS = int(10000)
-LOG_DIR = 'logs/cart_pole/v7'
-
 # # Constants
-# ENV_NAME = 'LunarLander-v2'
-# LEARNING_RATE = 3e-4
-# USE_HUBER = False
+# ENV_NAME = 'CartPole-v0'
+# LEARNING_RATE = 1e-3
+# USE_HUBER = True
 # NUM_TIMESTEPS = int(1e7)
 # BATCH_SIZE = 64
 # GAMMA = .99
-# UPDATE_TARGET_STEPS = int(1e4)
+# UPDATE_TARGET_STEPS = int(5000)
 # FINAL_EPSILON = 0.01
-# STOP_EXPLORATION = int(1e6)
-# LOG_STEPS = int(1e4)
-# MAX_REPLAYS = int(1e6)
-# MIN_REPLAYS = int(5e4)
-# LOG_DIR = 'logs/lunar_lander'
+# STOP_EXPLORATION = int(30000)
+# LOG_STEPS = int(1000)
+# MAX_REPLAYS = int(100000)
+# MIN_REPLAYS = int(10000)
+# LOG_DIR = 'logs/cart_pole/v7'
+
+# Constants
+ENV_NAME = 'LunarLander-v2'
+LEARNING_RATE = 3e-4
+USE_HUBER = False
+NUM_TIMESTEPS = int(1e7)
+BATCH_SIZE = 64
+GAMMA = .99
+UPDATE_TARGET_STEPS = int(1e4)
+FINAL_EPSILON = 0.01
+STOP_EXPLORATION = int(1e6)
+LOG_STEPS = int(1e4)
+MAX_REPLAYS = int(5e5)
+MIN_REPLAYS = int(1e4)
+LOG_DIR = 'logs/lunar_lander/0'
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
