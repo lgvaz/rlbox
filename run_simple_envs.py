@@ -95,9 +95,10 @@ for i_step in range(1, NUM_TIMESTEPS + 1):
     b_s, b_a, b_r, b_d, b_s_ = buffer.sample(BATCH_SIZE)
     # Compute max-Q using target network
     Q_next = model.target_predict(b_s_)
+    # Q_next = model.predict(b_s_)
     Q_next_max = np.max(Q_next, axis=1)
     # Calculate TD target
-    td_target = reward + (1 - b_d) * GAMMA * Q_next_max
+    td_target = b_r + (1 - b_d) * GAMMA * Q_next_max
     # Update weights of main model
     loss = model.fit(b_s, b_a, td_target)
     losses.append(loss)
