@@ -6,7 +6,7 @@ from keras import backend as K
 
 
 class SimpleReplayBuffer:
-    def __init__(self, maxlen=10000):
+    def __init__(self, maxlen):
         self.memory = deque(maxlen=maxlen)
 
     def add(self, state, action, reward, done, next_state):
@@ -43,6 +43,7 @@ def huber_loss(y_true, y_pred, delta=1.):
     linear_error = delta * (K.abs(error) - 0.5 * delta)
     return tf.where(condition, squared_error, linear_error)
 
+
 def mean_squared_loss(y_true, y_pred):
     error = y_true - y_pred
     return 0.5 * K.square(error)
@@ -57,6 +58,19 @@ def get_epsilon_op(final_epsilon, stop_exploration):
             return np.exp(-epsilon_step * step)
         else:
             return final_epsilon
+
+    return get_epsilon
+
+
+def linear_epsilon_decay(epsilon_final, stop_exploration, epsilon_start=1):
+    ''' Calculates epsilon based on a linear interpolation '''
+    epsilon_step = - (epsilon_start - epsilon_final) / stop_exploration
+
+    def get_epsilon(step):
+        if step <= stop_exploration:
+            return epsilon_step * step + epsilon_start
+        else:
+            return epsilon_final
 
     return get_epsilon
 
