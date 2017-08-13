@@ -59,6 +59,7 @@ class DQN:
         net = states
         net = Dense(512, activation='relu')(net)
         # net = Dense(64, activation='relu')(net)
+        # net = Dense(64, activation='relu')(net)
         output = Dense(self.num_actions)(net)
 
         model = Model(inputs=[states, actions], outputs=output, name='predictions')
@@ -82,5 +83,9 @@ class DQN:
 
     def target_update(self):
         self.target.set_weights(self.model.get_weights())
+
+    def load_weights(self, weights_file):
+        self.model.load_weights(weights_file)
+        self.target.load_weights(weights_file)
 
 
