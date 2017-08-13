@@ -3,6 +3,7 @@ import gym
 import numpy as np
 from utils import *
 from model import DQN
+from watch_agent import EnvWatch
 
 
 # # Constants
@@ -46,13 +47,13 @@ USE_HUBER = True
 NUM_TIMESTEPS = int(1e6)
 BATCH_SIZE = 64
 GAMMA = .99
-UPDATE_TARGET_STEPS = int(600)
-FINAL_EPSILON = 0.1
+UPDATE_TARGET_STEPS = int(700)
+FINAL_EPSILON = 0.05
 STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/v8'
+LOG_DIR = 'logs/lunar_lander/v9'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
@@ -73,10 +74,16 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 # Create new enviroment
 env = gym.make(ENV_NAME)
 # env._max_episode_steps = 5000
+# Create DQN model
+state_shape = env.observation_space.shape
+num_actions = env.action_space.n
+model = DQN(state_shape, num_actions, LEARNING_RATE, use_huber=USE_HUBER)
+# Create env for evaluation
+env_watch = EnvWatch(ENV_NAME, model)
 
-buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
 # Populate replay memory
 print('Populating replay buffer...')
+buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
 state = env.reset()
 for _ in range(MIN_REPLAYS):
     action = env.action_space.sample()
@@ -88,14 +95,10 @@ for _ in range(MIN_REPLAYS):
     if done:
         state = env.reset()
 
-# Create DQN model
-state_shape = env.observation_space.shape
-num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, LEARNING_RATE, use_huber=USE_HUBER)
-
 # Record videos
 env = gym.wrappers.Monitor(env, VIDEO_DIR,
-                           video_callable=lambda count: count % 100 == 0)
+                           video_callable=lambda count: count % 300 == 0)
+
 state = env.reset()
 model.target_update()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
@@ -105,15 +108,13 @@ summary = create_summary(LOG_DIR)
 reward_sum = 0
 rewards = []
 losses = []
-# TODO: Track and plot Q values (verify with openai baselines)
+
 print('Started training...')
 for i_step in range(1, NUM_TIMESTEPS + 1):
-    # env.render()
     # Choose an action
     Q_values = model.predict(state[np.newaxis])
     epsilon = get_epsilon(i_step)
     action = egreedy_police(Q_values, epsilon)
-    # print(Q_values, action)
 
     # Execute action
     next_state, reward, done, _ = env.step(action)
@@ -127,7 +128,6 @@ for i_step in range(1, NUM_TIMESTEPS + 1):
     if done:
         state = env.reset()
         rewards.append(reward_sum)
-        summary('reward', reward_sum, i_step)
         reward_sum = 0
 
     # Train
@@ -149,15 +149,21 @@ for i_step in range(1, NUM_TIMESTEPS + 1):
 
     # Display logs
     if i_step % LOG_STEPS == 0:
+        # Run evaluation
+        ev_reward = env_watch.run()
         mean_reward = np.mean(rewards)
         rewards = []
         mean_loss = np.mean(losses)
         losses = []
+        summary('reward_train', mean_reward, i_step)
+        summary('reward_evaluation', ev_reward, i_step)
         summary('epsilon', epsilon, i_step)
-        summary('mean_reward', mean_reward, i_step)
         summary('loss', mean_loss, i_step)
         summary('Q_max', np.max(Q_next_max), i_step)
         summary('Q_mean', np.mean(Q_next), i_step)
-        print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
+        print('[Step: {}]'.format(i_step), end='')
+        print('[Eval Reward: {:.2f}]'.format(ev_reward), end='')
+        print('[Mean Reward: {:.2f}]'.format(mean_reward), end='')
+        print('[Epsilon: {:.2f}]'.format(epsilon))
 
-model.model.save_weights(LOG_DIR + '/model2_w.h5')
+model.model.save_weights(LOG_DIR + '/model_w.h5')
