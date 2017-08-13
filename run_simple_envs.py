@@ -160,4 +160,4 @@ for i_step in range(1, NUM_TIMESTEPS + 1):
         summary('Q_mean', np.mean(Q_next), i_step)
         print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
 
-model.model.save_weights(LOG_DIR + '/model_w.h5')
+model.model.save_weights(LOG_DIR + '/model2_w.h5')
