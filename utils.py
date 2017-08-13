@@ -49,15 +49,15 @@ def mean_squared_loss(y_true, y_pred):
     return 0.5 * K.square(error)
 
 
-def get_epsilon_op(final_epsilon, stop_exploration):
-    ''' Return an function that calculates epsilon based on the step '''
-    epsilon_step = - np.log(final_epsilon) / stop_exploration
+def exponential_epsilon_decay(epsilon_final, stop_exploration):
+    ''' Calculate epsilon based on an exponential interpolation '''
+    epsilon_step = - np.log(epsilon_final) / stop_exploration
 
     def get_epsilon(step):
         if step <= stop_exploration:
             return np.exp(-epsilon_step * step)
         else:
-            return final_epsilon
+            return epsilon_final
 
     return get_epsilon
 
