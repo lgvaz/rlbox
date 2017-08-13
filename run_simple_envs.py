@@ -1,7 +1,7 @@
 import os
 import gym
 import numpy as np
-from utils import SimpleReplayBuffer, get_epsilon_op, egreedy_police, create_summary
+from utils import *
 from model import DQN
 
 
@@ -9,37 +9,70 @@ from model import DQN
 # ENV_NAME = 'CartPole-v0'
 # LEARNING_RATE = 1e-3
 # USE_HUBER = True
-# NUM_TIMESTEPS = int(1e7)
+# NUM_TIMESTEPS = int(1e5)
 # BATCH_SIZE = 64
 # GAMMA = .99
-# UPDATE_TARGET_STEPS = int(5000)
-# FINAL_EPSILON = 0.01
-# STOP_EXPLORATION = int(30000)
-# LOG_STEPS = int(1000)
-# MAX_REPLAYS = int(100000)
-# MIN_REPLAYS = int(10000)
-# LOG_DIR = 'logs/cart_pole/v7'
+# UPDATE_TARGET_STEPS = int(500)
+# FINAL_EPSILON = 0.02
+# STOP_EXPLORATION = int(1e4)
+# LOG_STEPS = int(2000)
+# MAX_REPLAYS = int(5e4)
+# MIN_REPLAYS = int(1e4)
+# LOG_DIR = 'logs/cart_pole/v28'
+# VIDEO_DIR = LOG_DIR + '/videos'
+
+
+# # Constants
+# ENV_NAME = 'MountainCar-v0'
+# LEARNING_RATE = 1e-3
+# USE_HUBER = True
+# NUM_TIMESTEPS = int(1e5)
+# BATCH_SIZE = 64
+# GAMMA = .99
+# UPDATE_TARGET_STEPS = int(500)
+# FINAL_EPSILON = 0.1
+# STOP_EXPLORATION = int(1e4)
+# LOG_STEPS = int(2000)
+# MAX_REPLAYS = int(5e4)
+# MIN_REPLAYS = int(1e4)
+# LOG_DIR = 'logs/mountain_car/v1'
+# VIDEO_DIR = LOG_DIR + '/videos'
+
 
 # Constants
 ENV_NAME = 'LunarLander-v2'
-LEARNING_RATE = 3e-4
-USE_HUBER = False
-NUM_TIMESTEPS = int(1e7)
+LEARNING_RATE = 0.00025
+USE_HUBER = True
+NUM_TIMESTEPS = int(1e6)
 BATCH_SIZE = 64
 GAMMA = .99
-UPDATE_TARGET_STEPS = int(1e4)
-FINAL_EPSILON = 0.01
-STOP_EXPLORATION = int(1e6)
-LOG_STEPS = int(1e4)
+UPDATE_TARGET_STEPS = int(600)
+FINAL_EPSILON = 0.1
+STOP_EXPLORATION = int(1e5)
+LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
-MIN_REPLAYS = int(1e4)
-LOG_DIR = 'logs/lunar_lander/0'
+MIN_REPLAYS = int(1e5)
+LOG_DIR = 'logs/lunar_lander/v8'
+VIDEO_DIR = LOG_DIR + '/videos'
 
+
+# Create log directory
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
+if not os.path.exists(VIDEO_DIR):
+    os.makedirs(VIDEO_DIR)
+
+with open(LOG_DIR + '/parameters.txt', 'w') as f:
+    print('Learning rate: {}'.format(LEARNING_RATE), file=f)
+    print('Loss function: {}'.format(['MSE', 'Huber'][USE_HUBER]), file=f)
+    print('Target update steps: {}'.format(UPDATE_TARGET_STEPS), file=f)
+    print('Final epsilon: {}'.format(FINAL_EPSILON), file=f)
+    print('Stop exploration: {}'.format(STOP_EXPLORATION), file=f)
+    print('Memory size: {}'.format(MAX_REPLAYS), file=f)
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
+# env._max_episode_steps = 5000
 
 buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
 # Populate replay memory
@@ -60,21 +93,27 @@ state_shape = env.observation_space.shape
 num_actions = env.action_space.n
 model = DQN(state_shape, num_actions, LEARNING_RATE, use_huber=USE_HUBER)
 
+# Record videos
+env = gym.wrappers.Monitor(env, VIDEO_DIR,
+                           video_callable=lambda count: count % 100 == 0)
 state = env.reset()
 model.target_update()
-get_epsilon = get_epsilon_op(FINAL_EPSILON, STOP_EXPLORATION)
+# get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # Create logs variables
 summary = create_summary(LOG_DIR)
 reward_sum = 0
 rewards = []
 losses = []
 # TODO: Track and plot Q values (verify with openai baselines)
+print('Started training...')
 for i_step in range(1, NUM_TIMESTEPS + 1):
     # env.render()
     # Choose an action
     Q_values = model.predict(state[np.newaxis])
     epsilon = get_epsilon(i_step)
     action = egreedy_police(Q_values, epsilon)
+    # print(Q_values, action)
 
     # Execute action
     next_state, reward, done, _ = env.step(action)
@@ -114,6 +153,11 @@ for i_step in range(1, NUM_TIMESTEPS + 1):
         rewards = []
         mean_loss = np.mean(losses)
         losses = []
+        summary('epsilon', epsilon, i_step)
         summary('mean_reward', mean_reward, i_step)
         summary('loss', mean_loss, i_step)
+        summary('Q_max', np.max(Q_next_max), i_step)
+        summary('Q_mean', np.mean(Q_next), i_step)
         print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
+
+model.model.save_weights(LOG_DIR + '/model_w.h5')
