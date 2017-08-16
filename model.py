@@ -134,3 +134,6 @@ class DQN:
 
     def update_target_net(self, sess):
         sess.run(self.update_target_op)
+
+    def initialize(self, sess):
+        sess.run(tf.global_variables_initializer())

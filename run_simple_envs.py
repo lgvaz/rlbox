@@ -1,6 +1,7 @@
 import os
 import gym
 import numpy as np
+import tensorflow as tf
 from utils import *
 from model import DQN
 
@@ -52,7 +53,7 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/v8'
+LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
@@ -91,73 +92,61 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, LEARNING_RATE, use_huber=USE_HUBER)
+model = DQN(state_shape, num_actions, LEARNING_RATE, GAMMA)
 
 # Record videos
 env = gym.wrappers.Monitor(env, VIDEO_DIR,
                            video_callable=lambda count: count % 100 == 0)
 state = env.reset()
-model.target_update()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # Create logs variables
-summary = create_summary(LOG_DIR)
+# summary = create_summary(LOG_DIR)
 reward_sum = 0
 rewards = []
-losses = []
 # TODO: Track and plot Q values (verify with openai baselines)
-print('Started training...')
-for i_step in range(1, NUM_TIMESTEPS + 1):
-    # env.render()
-    # Choose an action
-    Q_values = model.predict(state[np.newaxis])
-    epsilon = get_epsilon(i_step)
-    action = egreedy_police(Q_values, epsilon)
-    # print(Q_values, action)
+with tf.Session() as sess:
+    model.initialize(sess)
+    print('Started training...')
+    for i_step in range(1, NUM_TIMESTEPS + 1):
+        # env.render()
+        # Choose an action
+        Q_values = model.predict(sess, state[np.newaxis])
+        epsilon = get_epsilon(i_step)
+        action = egreedy_police(Q_values, epsilon)
+        # print(Q_values, action)
 
-    # Execute action
-    next_state, reward, done, _ = env.step(action)
-    reward_sum += reward
+        # Execute action
+        next_state, reward, done, _ = env.step(action)
+        reward_sum += reward
 
-    # Store experience
-    buffer.add(state, action, reward, done, next_state)
+        # Store experience
+        buffer.add(state, action, reward, done, next_state)
 
-    # Update state
-    state = next_state
-    if done:
-        state = env.reset()
-        rewards.append(reward_sum)
-        summary('reward', reward_sum, i_step)
-        reward_sum = 0
+        # Update state
+        state = next_state
+        if done:
+            state = env.reset()
+            rewards.append(reward_sum)
+            # summary('reward', reward_sum, i_step)
+            reward_sum = 0
 
-    # Train
-    b_s, b_a, b_r, b_d, b_s_ = buffer.sample(BATCH_SIZE)
-    # Compute max-Q using target network
-    Q_next = model.target_predict(b_s_)
-    # Q_next = model.predict(b_s_)
-    Q_next_max = np.max(Q_next, axis=1)
-    # Calculate TD target
-    td_target = b_r + (1 - b_d) * GAMMA * Q_next_max
-    # Update weights of main model
-    loss = model.fit(b_s, b_a, td_target)
-    losses.append(loss)
+        # Train
+        b_s, b_a, b_r, b_d, b_s_ = buffer.sample(BATCH_SIZE)
+        model.train(sess, b_s, b_s_, b_a, b_r, b_d)
 
-    # Update weights of target model
-    if i_step % UPDATE_TARGET_STEPS == 0:
-        print('Updating target model...')
-        model.target_update()
+        # Update weights of target model
+        if i_step % UPDATE_TARGET_STEPS == 0:
+            print('Updating target model...')
+            model.update_target_net(sess)
 
-    # Display logs
-    if i_step % LOG_STEPS == 0:
-        mean_reward = np.mean(rewards)
-        rewards = []
-        mean_loss = np.mean(losses)
-        losses = []
-        summary('epsilon', epsilon, i_step)
-        summary('mean_reward', mean_reward, i_step)
-        summary('loss', mean_loss, i_step)
-        summary('Q_max', np.max(Q_next_max), i_step)
-        summary('Q_mean', np.mean(Q_next), i_step)
-        print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
-
-model.model.save_weights(LOG_DIR + '/model_w.h5')
+        # Display logs
+        if i_step % LOG_STEPS == 0:
+            mean_reward = np.mean(rewards)
+            rewards = []
+            # summary('epsilon', epsilon, i_step)
+            # summary('mean_reward', mean_reward, i_step)
+            # summary('loss', mean_loss, i_step)
+            # summary('Q_max', np.max(Q_next_max), i_step)
+            # summary('Q_mean', np.mean(Q_next), i_step)
+            print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
