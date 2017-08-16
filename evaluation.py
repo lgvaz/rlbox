@@ -1,15 +1,18 @@
 import gym
 import numpy as np
+import tensorflow as tf
 from model import DQN
 from utils import egreedy_police
 
-def watch(env, model):
+
+def evaluate(env, sess, model, render=False):
     state = env.reset()
     reward_sum = 0
     while True:
-        env.render()
+        if render:
+            env.render()
         # Choose best action
-        Q_values = model.predict(state[np.newaxis])
+        Q_values = model.predict(sess, state[np.newaxis])
         action = egreedy_police(Q_values, epsilon=0)
 
         # Execute action
@@ -23,10 +26,12 @@ def watch(env, model):
             return reward_sum
 
 
+# TODO: Run evaluation without the need to import model
+# Maybe fetch q_values after sv has loaded graph
 if __name__ == '__main__':
     # Constants
     ENV_NAME = 'LunarLander-v2'
-    MODEL_WEIGHTS = 'logs/lunar_lander/v8/model2_w.h5'
+    LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
     EPSILON = 0
     USE_HUBER = True
     LEARNING_RATE = 0
@@ -35,9 +40,10 @@ if __name__ == '__main__':
     state_shape = env.observation_space.shape
     num_actions = env.action_space.n
 
-    model = DQN(state_shape, num_actions, LEARNING_RATE, use_huber=USE_HUBER)
-    model.load_weights(MODEL_WEIGHTS)
+    model = DQN(state_shape, num_actions, LEARNING_RATE)
 
-    while True:
-        reward = watch(env, model)
-        print('Episode reward: {}'.format(reward))
+    sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
+    with sv.managed_session() as sess:
+        while True:
+            reward = evaluate(env, sess, model, render=False)
+            print('Episode reward: {}'.format(reward))

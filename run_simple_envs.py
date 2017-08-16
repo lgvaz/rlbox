@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from utils import *
 from model import DQN
+from evaluation import evaluate
 
 
 # # Constants
@@ -53,7 +54,7 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
+LOG_DIR = 'logs/lunar_lander/tensorflow/v0_1'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
@@ -73,6 +74,8 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
+# Create separete env for running evaluations
+env_eval = gym.make(ENV_NAME)
 # env._max_episode_steps = 5000
 
 buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
@@ -140,9 +143,14 @@ with sv.managed_session() as sess:
 
         # Display logs
         if i_step % LOG_STEPS == 0:
+            eval_reward = np.mean([evaluate(env_eval, sess, model) for _ in range(5)])
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
+            model.summary_scalar(sess, sv, 'reward_train', mean_reward)
+            model.summary_scalar(sess, sv, 'reward_eval', eval_reward)
             model.summary_scalar(sess, sv, 'epsilon', epsilon)
-            model.summary_scalar(sess, sv, 'reward', mean_reward)
-            print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))
+            print('[Step: {}]'.format(i_step), end='')
+            print('[Train reward: {:.2f}]'.format(mean_reward), end='')
+            print('[Eval reward: {:.2f}]'.format(eval_reward), end='')
+            print('[Epsilon: {:.2f}]'.format(epsilon))
