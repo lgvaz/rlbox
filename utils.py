@@ -62,14 +62,3 @@ def egreedy_police(Q_values, epsilon):
     else:
         return np.argmax(np.squeeze(Q_values))
 
-
-def create_summary(logdir='logs/'):
-    writer = tf.summary.FileWriter(logdir)
-
-    def write_value(name, value, step):
-        summary = tf.Summary(value=[
-            tf.Summary.Value(tag=name, simple_value=value),
-        ])
-        writer.add_summary(summary, step)
-
-    return write_value
