@@ -3,14 +3,30 @@ import tensorflow as tf
 from utils import huber_loss
 
 
+# TODO: Choice of loss (Huber or MSE)
 class DQN:
-    def __init__(self, state_shape, num_actions, learning_rate, use_huber=True):
+    def __init__(self, state_shape, num_actions, learning_rate, gamma=0.99):
         self.state_shape = state_shape
         self.num_actions = num_actions
-        self.lr = learning_rate
-        self.use_huber = use_huber
 
+        if len(state_shape) == 3:
+            state_type = tf.uint8
+        if len(state_shape) == 1:
+            state_type = tf.float32
+        else:
+            raise ValueError('state_shape not supported')
+        
         # Model inputs
+        self.states_t = tf.placeholder(
+            name='states',
+            shape=[None] + list(self.state_shape),
+            dtype=state_type
+        )
+        self.states_tp1 = tf.placeholder(
+            name='states_tp1',
+            shape=[None] + list(self.state_shape),
+            dtype=state_type
+        )
         self.actions = tf.placeholder(
             name='actions',
             shape=[None],
@@ -29,44 +45,19 @@ class DQN:
 
         # Create model
         if len(state_shape) == 3:
-            self.states_t = tf.placeholder(
-                name='states',
-                shape=[None] + list(self.state_shape),
-                dtype=tf.uint8
-            )
-            self.states_tp1 = tf.placeholder(
-                name='states_tp1',
-                shape=[None] + list(self.state_shape),
-                dtype=tf.uint8
-            )
             # Convert to float on GPU
             states_t_float = tf.cast(self.states_t, tf.float32) / 255.
             states_tp1_float = tf.cast(self.states_tp1, tf.float32) / 255.
-
             self.q_values = self._build_deepmind_model(states_t_float, 'online')
             self.q_target = self._build_deepmind_model(states_tp1_float, 'target')
 
         elif len(state_shape) == 1:
-            print('shape1')
-            self.states_t = tf.placeholder(
-                name='states',
-                shape=[None] + list(self.state_shape),
-                dtype=tf.float32
-            )
-            self.states_tp1 = tf.placeholder(
-                name='states_tp1',
-                shape=[None] + list(self.state_shape),
-                dtype=tf.float32
-            )
             self.q_values = self._build_dense_model(self.states_t, 'online')
             self.q_target = self._build_dense_model(self.states_tp1, 'target')
 
-        else:
-            raise ValueError('state_shape not supported')
-
         # Create training operation
         # TODO: Remove hardcoded gamma
-        self.training_op = self._build_optimization(learning_rate, 0.99)
+        self.training_op = self._build_optimization(learning_rate, gamma)
 
         self.update_target_op = self._build_target_update_op()
 
@@ -105,7 +96,6 @@ class DQN:
         # Caculate td_target
         q_tp1 = tf.reduce_max(self.q_target, axis=1)
         td_target = self.rewards + (1 - self.done_mask) * gamma * q_tp1
-        # TODO: Huber loss
         # errors = tf.squared_difference(q_t, td_target)
         errors = huber_loss(q_t, td_target)
         total_error = tf.reduce_mean(errors)
