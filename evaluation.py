@@ -1,4 +1,6 @@
+import os
 import gym
+import fire
 import numpy as np
 import tensorflow as tf
 from model import DQN
@@ -25,25 +27,33 @@ def evaluate(env, sess, model, render=False):
             state = env.reset()
             return reward_sum
 
-
-# TODO: Run evaluation without the need to import model
-# Maybe fetch q_values after sv has loaded graph
-if __name__ == '__main__':
-    # Constants
-    ENV_NAME = 'LunarLander-v2'
-    LOG_DIR = 'logs/lunar_lander/tensorflow/v0_1'
-    EPSILON = 0
-    USE_HUBER = True
-    LEARNING_RATE = 0
-
-    env = gym.make(ENV_NAME)
+def setup(env_name, log_dir, save_videos=False):
+    # Create enviroment
+    env = gym.make(env_name)
     state_shape = env.observation_space.shape
     num_actions = env.action_space.n
 
-    model = DQN(state_shape, num_actions, LEARNING_RATE)
+    # Create videos directory
+    render = True
+    if save_videos:
+        render = False
+        video_dir = os.path.join(log_dir, 'videos/eval')
+        if not os.path.exists(video_dir):
+            os.makedirs(video_dir)
+        env = gym.wrappers.Monitor(env, video_dir,
+                                   video_callable=lambda x: x % 2 == 0)
 
-    sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
+    # Create model
+    # TODO: Import model from metagraph
+    model = DQN(state_shape, num_actions, learning_rate=0)
+
+    # Reload graph
+    sv = tf.train.Supervisor(logdir=log_dir, summary_op=None)
     with sv.managed_session() as sess:
         while True:
-            reward = evaluate(env, sess, model, render=True)
+            reward = evaluate(env, sess, model, render=False)
             print('Episode reward: {}'.format(reward))
+
+# Maybe fetch q_values after sv has loaded graph
+if __name__ == '__main__':
+    fire.Fire(setup)

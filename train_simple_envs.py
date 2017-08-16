@@ -55,7 +55,7 @@ LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
 LOG_DIR = 'logs/lunar_lander/tensorflow/v0_1'
-VIDEO_DIR = LOG_DIR + '/videos'
+VIDEO_DIR = LOG_DIR + '/videos/train'
 
 
 # Create log directory
