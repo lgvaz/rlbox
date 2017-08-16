@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from model import DQN
 
 # STATE_SHAPE = [84, 84, 1]
@@ -10,24 +11,25 @@ NUM_ACTIONS = 3
 # A higher learning rate can be used for simple envs
 LEARNING_RATE = 1e-2
 
-for i_action in range(NUM_ACTIONS):
+model = DQN(STATE_SHAPE, NUM_ACTIONS, LEARNING_RATE)
 
-    model = DQN(STATE_SHAPE, NUM_ACTIONS, LEARNING_RATE, use_huber=True)
+fake_states = np.random.random([3] + STATE_SHAPE)
+fake_target_states = np.random.random([3] + STATE_SHAPE)
+fake_actions = np.array([0, 0, 0])
+fake_rewards = np.array([100, 100, 100])
+fake_dones = np.array([1, 1, 1])
 
-    fake_inputs = np.random.random([NUM_ACTIONS] + STATE_SHAPE)
-    fake_labels = np.arange(1, NUM_ACTIONS + 1) * 2
-    fake_actions = np.array([i_action] * NUM_ACTIONS)
+sess = tf.InteractiveSession()
+sess.run(tf.global_variables_initializer())
 
-    old_preds = model.predict(fake_inputs)
-    old_target_preds = model.target_predict(fake_inputs)
-    for _ in range(100):
-        model.fit(fake_inputs, fake_actions, fake_labels)
-    new_preds = model.predict(fake_inputs)
-    model.target_update()
-    new_target_preds = model.target_predict(fake_inputs)
-
-    print('\nAction {} | Original: {}'.format(i_action, fake_labels))
-    print('Old preds:\n{}'.format(old_preds))
-    print('Old target preds:\n{}'.format(old_target_preds))
-    print('New preds:\n{}'.format(new_preds))
-    print('New target preds:\n{}'.format(new_target_preds))
+old_preds = model.predict(sess, fake_states)
+print('Old predictions:\n', old_preds)
+for _ in range(100):
+    model.fit(sess,
+            fake_states,
+            fake_target_states,
+            fake_actions,
+            fake_rewards,
+            fake_dones)
+new_preds = model.predict(sess, fake_states)
+print('New predictions:\n', new_preds)
