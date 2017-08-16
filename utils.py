@@ -38,9 +38,9 @@ def huber_loss(y_true, y_pred, delta=1.):
     https://en.wikipedia.org/wiki/Huber_loss
     '''
     error = y_true - y_pred
-    condition = K.abs(error) <= delta
-    squared_error = 0.5 * K.square(error)
-    linear_error = delta * (K.abs(error) - 0.5 * delta)
+    condition = tf.abs(error) <= delta
+    squared_error = 0.5 * tf.square(error)
+    linear_error = delta * (tf.abs(error) - 0.5 * delta)
     return tf.where(condition, squared_error, linear_error)
 
 

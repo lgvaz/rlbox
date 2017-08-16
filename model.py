@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-# from utils import *
+from utils import huber_loss
 
 
 class DQN:
@@ -102,7 +102,8 @@ class DQN:
         q_tp1 = tf.reduce_max(self.q_target, axis=1)
         td_target = self.rewards + (1 - self.done_mask) * gamma * q_tp1
         # TODO: Huber loss
-        errors = tf.squared_difference(q_t, td_target)
+        # errors = tf.squared_difference(q_t, td_target)
+        errors = huber_loss(q_t, td_target)
         total_error = tf.reduce_mean(errors)
 
         # Create training operation
