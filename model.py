@@ -122,7 +122,7 @@ class DQN:
     def target_predict(self, sess, states):
         return sess.run(self.q_target, feed_dict={self.states_tp1: states})
 
-    def fit(self, sess, states_t, states_tp1, actions, rewards, dones):
+    def train(self, sess, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
             self.states_t: states_t,
             self.states_tp1: states_tp1,

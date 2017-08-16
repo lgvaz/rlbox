@@ -34,7 +34,7 @@ for i_action in range(NUM_ACTIONS):
         old_preds = model.predict(sess, fake_states)
         print('Old predictions:\n', old_preds)
         for _ in range(100):
-            model.fit(sess,
+            model.train(sess,
                       fake_states,
                       fake_target_states,
                       fake_actions,
