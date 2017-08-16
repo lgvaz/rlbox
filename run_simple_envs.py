@@ -53,7 +53,7 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
+LOG_DIR = 'logs/lunar_lander/tensorflow/v2'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
@@ -101,19 +101,19 @@ state = env.reset()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # Create logs variables
-# summary = create_summary(LOG_DIR)
+summary_op = model.create_summaries()
 reward_sum = 0
 rewards = []
-# TODO: Track and plot Q values (verify with openai baselines)
+
 sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
 print('Started training...')
 with sv.managed_session() as sess:
-    for i_step in range(1, NUM_TIMESTEPS + 1):
+    global_step = tf.train.global_step(sess, model.global_step_tensor)
+    for i_step in range(global_step, NUM_TIMESTEPS + 1):
         # Choose an action
         Q_values = model.predict(sess, state[np.newaxis])
         epsilon = get_epsilon(i_step)
         action = egreedy_police(Q_values, epsilon)
-        # print(Q_values, action)
 
         # Execute action
         next_state, reward, done, _ = env.step(action)
@@ -143,6 +143,7 @@ with sv.managed_session() as sess:
         if i_step % LOG_STEPS == 0:
             mean_reward = np.mean(rewards)
             rewards = []
+            summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
             # summary('epsilon', epsilon, i_step)
             # summary('mean_reward', mean_reward, i_step)
             # summary('loss', mean_loss, i_step)
