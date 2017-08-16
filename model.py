@@ -45,7 +45,8 @@ class DQN:
         output = Dense(self.num_actions)(net)
 
         model = Model(inputs=[states, actions], outputs=output, name='predictions')
-        model.compile(optimizer=Adam(self.lr), loss=mask_loss(actions, self.num_actions))
+        model.compile(optimizer=Adam(self.lr),
+                      loss=mask_loss(actions, self.num_actions, huber=self.use_huber))
 
         return model
 
@@ -57,12 +58,13 @@ class DQN:
 
         # Model architecture
         net = states
-        net = Dense(512, activation='relu')(net)
-        # net = Dense(64, activation='relu')(net)
+        net = Dense(512, activation='tanh')(net)
+        # net = Dense(16, activation='relu')(net)
+        # net = Dense(8, activation='relu')(net)
         output = Dense(self.num_actions)(net)
 
         model = Model(inputs=[states, actions], outputs=output, name='predictions')
-        model.compile(optimizer=Adam(self.lr),
+        model.compile(optimizer=Adam(self.lr, decay=9e-6),
                       loss=mask_loss(actions, self.num_actions, huber=self.use_huber))
 
         return model

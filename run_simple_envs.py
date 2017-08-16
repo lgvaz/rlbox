@@ -42,18 +42,18 @@ from watch_agent import EnvWatch
 
 # Constants
 ENV_NAME = 'LunarLander-v2'
-LEARNING_RATE = 0.00025
+LEARNING_RATE = 1e-3
 USE_HUBER = True
 NUM_TIMESTEPS = int(1e6)
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 GAMMA = .99
 UPDATE_TARGET_STEPS = int(700)
-FINAL_EPSILON = 0.05
+FINAL_EPSILON = 0.1
 STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
-MAX_REPLAYS = int(5e5)
-MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/v9'
+MAX_REPLAYS = int(2e5)
+MIN_REPLAYS = int(1e4)
+LOG_DIR = 'logs/lunar_lander/v19'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
