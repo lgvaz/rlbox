@@ -2,7 +2,6 @@ import random
 import numpy as np
 from collections import deque
 import tensorflow as tf
-from keras import backend as K
 
 
 class SimpleReplayBuffer:
@@ -17,21 +16,6 @@ class SimpleReplayBuffer:
         return map(np.array, zip(*batch))
 
 
-def mask_loss(actions, num_actions, huber=True):
-    '''
-    The target only corresponds to the selected action,
-    so the error must be masked to only inclued the loss from the chosen action
-    '''
-    def loss(y_true, y_pred):
-        onehot_actions = K.one_hot(actions, num_actions)
-        if huber:
-            errors = huber_loss(y_true, y_pred)
-        else:
-            errors = mean_squared_loss(y_true, y_pred)
-        return K.mean(onehot_actions * errors)
-    return loss
-
-
 def huber_loss(y_true, y_pred, delta=1.):
     '''
     Hubber loss is less sensitive to outliers
@@ -42,11 +26,6 @@ def huber_loss(y_true, y_pred, delta=1.):
     squared_error = 0.5 * tf.square(error)
     linear_error = delta * (tf.abs(error) - 0.5 * delta)
     return tf.where(condition, squared_error, linear_error)
-
-
-def mean_squared_loss(y_true, y_pred):
-    error = y_true - y_pred
-    return 0.5 * K.square(error)
 
 
 def exponential_epsilon_decay(epsilon_final, stop_exploration):
