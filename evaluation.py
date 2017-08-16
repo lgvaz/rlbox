@@ -31,7 +31,7 @@ def evaluate(env, sess, model, render=False):
 if __name__ == '__main__':
     # Constants
     ENV_NAME = 'LunarLander-v2'
-    LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
+    LOG_DIR = 'logs/lunar_lander/tensorflow/v0_1'
     EPSILON = 0
     USE_HUBER = True
     LEARNING_RATE = 0
@@ -45,5 +45,5 @@ if __name__ == '__main__':
     sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
     with sv.managed_session() as sess:
         while True:
-            reward = evaluate(env, sess, model, render=False)
+            reward = evaluate(env, sess, model, render=True)
             print('Episode reward: {}'.format(reward))

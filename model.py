@@ -75,7 +75,7 @@ class DQN:
 
             # Dense layers
             net = tf.layers.dense(net, 512, activation=tf.nn.relu)
-            output = tf.layers.dense(net, self.num_actions)
+            output = tf.layers.dense(net, self.num_actions, name='Q_{}'.format(scope))
 
             return output
 
@@ -85,7 +85,7 @@ class DQN:
             # Model architecture
             net = states
             net = tf.layers.dense(net, 512, activation=tf.nn.relu)
-            output = tf.layers.dense(net, self.num_actions)
+            output = tf.layers.dense(net, self.num_actions), name='Q_{}'.format(scope)
 
             return output
 
