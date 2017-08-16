@@ -105,11 +105,10 @@ get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 reward_sum = 0
 rewards = []
 # TODO: Track and plot Q values (verify with openai baselines)
-with tf.Session() as sess:
-    model.initialize(sess)
-    print('Started training...')
+sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
+print('Started training...')
+with sv.managed_session() as sess:
     for i_step in range(1, NUM_TIMESTEPS + 1):
-        # env.render()
         # Choose an action
         Q_values = model.predict(sess, state[np.newaxis])
         epsilon = get_epsilon(i_step)
