@@ -53,7 +53,7 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/tensorflow/v2'
+LOG_DIR = 'logs/lunar_lander/tensorflow/v0'
 VIDEO_DIR = LOG_DIR + '/videos'
 
 
@@ -127,7 +127,6 @@ with sv.managed_session() as sess:
         if done:
             state = env.reset()
             rewards.append(reward_sum)
-            # summary('reward', reward_sum, i_step)
             reward_sum = 0
 
         # Train
@@ -144,9 +143,6 @@ with sv.managed_session() as sess:
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
-            # summary('epsilon', epsilon, i_step)
-            # summary('mean_reward', mean_reward, i_step)
-            # summary('loss', mean_loss, i_step)
-            # summary('Q_max', np.max(Q_next_max), i_step)
-            # summary('Q_mean', np.mean(Q_next), i_step)
+            model.summary_scalar(sess, sv, 'epsilon', epsilon)
+            model.summary_scalar(sess, sv, 'reward', mean_reward)
             print('[Step: {}][Mean Reward: {:.2f}][Epsilon: {:.2f}]'.format(i_step, mean_reward, epsilon))

@@ -113,7 +113,7 @@ class DQN:
         target_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'target')
         # Create operations that copy the variables
         op_holder = [target_var.assign(alpha * online_var + (1 - alpha) * target_var)
-                    for online_var, target_var in zip(online_vars, target_vars)]
+                     for online_var, target_var in zip(online_vars, target_vars)]
 
         return op_holder
 
@@ -137,6 +137,14 @@ class DQN:
             sv.summary_computed(sess, summary)
 
         return run_op
+
+    def summary_scalar(self, sess, sv, name, value):
+        # writer = sv.summary_writer
+        summary = tf.Summary(value=[
+            tf.Summary.Value(tag=name, simple_value=value),
+        ])
+        # writer.add_summary(summary, tf.train.global_step(sess, self.global_step_tensor))
+        sv.summary_computed(sess, summary)
 
     def predict(self, sess, states):
         return sess.run(self.q_values, feed_dict={self.states_t: states})
