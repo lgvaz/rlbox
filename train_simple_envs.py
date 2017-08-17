@@ -11,7 +11,7 @@ from evaluation import evaluate
 # ENV_NAME = 'CartPole-v0'
 # LEARNING_RATE = 1e-3
 # USE_HUBER = True
-# NUM_TIMESTEPS = int(1e5)
+# NUM_STEPS = int(1e5)
 # BATCH_SIZE = 64
 # GAMMA = .99
 # UPDATE_TARGET_STEPS = int(500)
@@ -28,7 +28,7 @@ from evaluation import evaluate
 # ENV_NAME = 'MountainCar-v0'
 # LEARNING_RATE = 1e-3
 # USE_HUBER = True
-# NUM_TIMESTEPS = int(1e5)
+# NUM_STEPS = int(1e5)
 # BATCH_SIZE = 64
 # GAMMA = .99
 # UPDATE_TARGET_STEPS = int(500)
@@ -43,9 +43,9 @@ from evaluation import evaluate
 
 # Constants
 ENV_NAME = 'LunarLander-v2'
-LEARNING_RATE = 0.00025
+LEARNING_RATE = 1e-3
 USE_HUBER = True
-NUM_TIMESTEPS = int(1e6)
+NUM_STEPS = int(1e6)
 BATCH_SIZE = 64
 GAMMA = .99
 UPDATE_TARGET_STEPS = int(600)
@@ -54,8 +54,9 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e5)
 MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/tensorflow/v0_1'
+LOG_DIR = 'logs/lunar_lander/v3_0'
 VIDEO_DIR = LOG_DIR + '/videos/train'
+LR_DECAY_RATE = 0.1
 
 
 # Create log directory
@@ -71,11 +72,12 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
     print('Final epsilon: {}'.format(FINAL_EPSILON), file=f)
     print('Stop exploration: {}'.format(STOP_EXPLORATION), file=f)
     print('Memory size: {}'.format(MAX_REPLAYS), file=f)
+    print('Learning rate decay'.format(LR_DECAY_RATE), file=f)
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
 # Create separete env for running evaluations
-env_eval = gym.make(ENV_NAME)
+# env_eval = gym.make(ENV_NAME)
 # env._max_episode_steps = 5000
 
 buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
@@ -95,7 +97,8 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, LEARNING_RATE, GAMMA)
+model = DQN(state_shape, num_actions, LEARNING_RATE,
+            lr_decay_steps=NUM_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
 
 # Record videos
 env = gym.wrappers.Monitor(env, VIDEO_DIR,
@@ -112,7 +115,7 @@ sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
 print('Started training...')
 with sv.managed_session() as sess:
     global_step = tf.train.global_step(sess, model.global_step_tensor)
-    for i_step in range(global_step, NUM_TIMESTEPS + 1):
+    for i_step in range(global_step, NUM_STEPS + 1):
         # Choose an action
         Q_values = model.predict(sess, state[np.newaxis])
         epsilon = get_epsilon(i_step)
@@ -143,14 +146,14 @@ with sv.managed_session() as sess:
 
         # Display logs
         if i_step % LOG_STEPS == 0:
-            eval_reward = np.mean([evaluate(env_eval, sess, model) for _ in range(5)])
+            # eval_reward = np.mean([evaluate(env_eval, sess, model) for _ in range(5)])
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
             model.summary_scalar(sess, sv, 'reward_train', mean_reward)
-            model.summary_scalar(sess, sv, 'reward_eval', eval_reward)
+            # model.summary_scalar(sess, sv, 'reward_eval', eval_reward)
             model.summary_scalar(sess, sv, 'epsilon', epsilon)
             print('[Step: {}]'.format(i_step), end='')
             print('[Train reward: {:.2f}]'.format(mean_reward), end='')
-            print('[Eval reward: {:.2f}]'.format(eval_reward), end='')
+            # print('[Eval reward: {:.2f}]'.format(eval_reward), end='')
             print('[Epsilon: {:.2f}]'.format(epsilon))
