@@ -16,6 +16,83 @@ class SimpleReplayBuffer:
         return map(np.array, zip(*batch))
 
 
+class ImgReplayBuffer:
+    def __init__(self, maxlen, history_length):
+        self.initialized = False
+        self.maxlen = maxlen
+        self.history_length = history_length
+        self.current_idx = 0
+        self.current_len = 0
+
+    def add(self, state, action, reward, done):
+        if not self.initialized:
+            self.initialized = True
+            self.states = np.empty([self.maxlen] + list(state.shape), dtype=np.uint8)
+            self.actions = np.empty([self.maxlen], dtype=np.int32)
+            self.rewards = np.empty([self.maxlen], dtype=np.float32)
+            self.dones = np.empty([self.maxlen], dtype=np.bool)
+
+        # Store experience
+        self.states[self.current_idx] = state
+        self.actions[self.current_idx] = action
+        self.rewards[self.current_idx] = reward
+        self.dones[self.current_idx] = done
+
+        self.current_idx = (self.current_idx + 1) % self.maxlen
+        self.current_len = min(self.current_len + 1, self.maxlen)
+
+    def sample(self, batch_size):
+        # # Get random indxs
+        # random_idxs = np.random.choice(self.current_len - self.history_length,
+        #                               size=batch_size, replace=False)
+        # corrected_idxs = [self.idx_correction(idx) for idx in random_idxs]
+
+        start_idxs, end_idxs = self.generate_idxs(batch_size)
+
+        # TODO: Only splice self.states once to get state and next_state
+        b_states = np.array([self.states[start_idx:end_idx] for
+                             start_idx, end_idx in zip(start_idxs, end_idxs)])
+        b_states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
+                                  start_idx, end_idx in zip(start_idxs, end_idxs)])
+        rewards = self.rewards[end_idxs]
+        dones = self.dones[end_idxs]
+
+        return (b_states.transpose(0, 2, 3, 1),
+                b_states_next.transpose(0, 2, 3, 1),
+                rewards,
+                dones)
+
+    def idx_correction(self, idx):
+        ''' Only end_idx can be have done == True '''
+        start_idx = idx
+        end_idx = idx + self.history_length
+
+        for i_idx in range(start_idx, end_idx):
+            if self.dones[i_idx] == True:
+                start_idx = i_idx + 1
+                end_idx = start_idx + self.history_length
+
+        return start_idx, end_idx
+
+    def generate_idxs(self, batch_size):
+        start_idxs = []
+        end_idxs = []
+        while len(start_idxs) < batch_size:
+            start_idx = np.random.randint(0, self.current_len - self.history_length)
+            end_idx = start_idx + self.history_length
+
+            if start_idx in start_idxs:
+                continue
+
+            for i_idx in range(start_idx, end_idx - 1):
+                if self.dones[i_idx] is True:
+                    continue
+
+            start_idxs.append(start_idx)
+            end_idxs.append(end_idx)
+
+        return start_idxs, end_idxs
+
 def huber_loss(y_true, y_pred, delta=1.):
     '''
     Hubber loss is less sensitive to outliers
