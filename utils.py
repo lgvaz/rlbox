@@ -42,23 +42,25 @@ class ImgReplayBuffer:
         self.current_len = min(self.current_len + 1, self.maxlen)
 
     def sample(self, batch_size):
-        start_idxs, end_idxs = self.generate_idxs(batch_size)
+        start_idxs, end_idxs = self._generate_idxs(batch_size)
 
         # TODO: Only splice self.states once to get state and next_state
-        b_states = np.array([self.states[start_idx:end_idx] for
+        states = np.array([self.states[start_idx:end_idx] for
                              start_idx, end_idx in zip(start_idxs, end_idxs)])
-        b_states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
+        states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
                                   start_idx, end_idx in zip(start_idxs, end_idxs)])
         # Remember that when spilicing the end_idx is not included
+        actions = self.actions[end_idxs - 1]
         rewards = self.rewards[end_idxs - 1]
         dones = self.dones[end_idxs - 1]
 
-        return (b_states.transpose(0, 2, 3, 1),
-                b_states_next.transpose(0, 2, 3, 1),
+        return (states.transpose(0, 2, 3, 1),
+                states_next.transpose(0, 2, 3, 1),
+                actions,
                 rewards,
                 dones)
 
-    def generate_idxs(self, batch_size):
+    def _generate_idxs(self, batch_size):
         start_idxs = []
         end_idxs = []
         while len(start_idxs) < batch_size:
@@ -77,7 +79,7 @@ class ImgReplayBuffer:
             start_idxs.append(start_idx)
             end_idxs.append(end_idx)
 
-        return start_idxs, end_idxs
+        return np.array(start_idxs), np.array(end_idxs)
 
 def huber_loss(y_true, y_pred, delta=1.):
     '''
