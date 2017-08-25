@@ -42,11 +42,6 @@ class ImgReplayBuffer:
         self.current_len = min(self.current_len + 1, self.maxlen)
 
     def sample(self, batch_size):
-        # # Get random indxs
-        # random_idxs = np.random.choice(self.current_len - self.history_length,
-        #                               size=batch_size, replace=False)
-        # corrected_idxs = [self.idx_correction(idx) for idx in random_idxs]
-
         start_idxs, end_idxs = self.generate_idxs(batch_size)
 
         # TODO: Only splice self.states once to get state and next_state
@@ -54,25 +49,14 @@ class ImgReplayBuffer:
                              start_idx, end_idx in zip(start_idxs, end_idxs)])
         b_states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
                                   start_idx, end_idx in zip(start_idxs, end_idxs)])
-        rewards = self.rewards[end_idxs]
-        dones = self.dones[end_idxs]
+        # Remember that when spilicing the end_idx is not included
+        rewards = self.rewards[end_idxs - 1]
+        dones = self.dones[end_idxs - 1]
 
         return (b_states.transpose(0, 2, 3, 1),
                 b_states_next.transpose(0, 2, 3, 1),
                 rewards,
                 dones)
-
-    def idx_correction(self, idx):
-        ''' Only end_idx can be have done == True '''
-        start_idx = idx
-        end_idx = idx + self.history_length
-
-        for i_idx in range(start_idx, end_idx):
-            if self.dones[i_idx] == True:
-                start_idx = i_idx + 1
-                end_idx = start_idx + self.history_length
-
-        return start_idx, end_idx
 
     def generate_idxs(self, batch_size):
         start_idxs = []
@@ -81,9 +65,11 @@ class ImgReplayBuffer:
             start_idx = np.random.randint(0, self.current_len - self.history_length)
             end_idx = start_idx + self.history_length
 
+            # Check if idx was already picked
             if start_idx in start_idxs:
                 continue
-
+            # Only the last frame can have done == True
+            # TODO: Check if done checking is correct
             for i_idx in range(start_idx, end_idx - 1):
                 if self.dones[i_idx] is True:
                     continue
