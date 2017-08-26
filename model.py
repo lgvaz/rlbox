@@ -13,10 +13,10 @@ class DQN:
 
         if len(state_shape) == 3:
             state_type = tf.uint8
-        if len(state_shape) == 1:
+        elif len(state_shape) == 1:
             state_type = tf.float32
         else:
-            raise ValueError('state_shape not supported')
+            raise ValueError('state_shape not supported: {}'.format(state_shape))
 
         # Model inputs
         self.states_t = tf.placeholder(

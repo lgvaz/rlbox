@@ -24,7 +24,7 @@ class ImgReplayBuffer:
         self.current_idx = 0
         self.current_len = 0
 
-    def add(self, state, action, reward, done):
+    def add_state(self, state):
         if not self.initialized:
             self.initialized = True
             self.states = np.empty([self.maxlen] + list(state.shape), dtype=np.uint8)
@@ -32,14 +32,36 @@ class ImgReplayBuffer:
             self.rewards = np.empty([self.maxlen], dtype=np.float32)
             self.dones = np.empty([self.maxlen], dtype=np.bool)
 
-        # Store experience
-        self.states[self.current_idx] = state
-        self.actions[self.current_idx] = action
-        self.rewards[self.current_idx] = reward
-        self.dones[self.current_idx] = done
+        # Store state
+        idx = self.current_idx
+        self.states[idx] = state
 
         self.current_idx = (self.current_idx + 1) % self.maxlen
         self.current_len = min(self.current_len + 1, self.maxlen)
+
+        return idx
+
+    def add_effect(self, idx, action, reward, done):
+        self.actions[idx] = action
+        self.rewards[idx] = reward
+        self.dones[idx] = done
+
+    def last_state(self):
+        end_idx = self.current_idx
+        start_idx = end_idx - self.history_length
+
+        for idx in range(start_idx, end_idx):
+            if self.dones[idx]:
+                start_idx = idx + 1
+
+        state = self.states[start_idx:end_idx]
+
+        missing_frames = self.history_length - (end_idx - start_idx)
+        if missing_frames:
+            zero_frames = np.zeros([missing_frames] + list(state.shape[1:]))
+            return np.concatenate((zero_frames, state), axis=0).transpose(1, 2, 0)
+        else:
+            return state.transpose(1, 2, 0)
 
     def sample(self, batch_size):
         start_idxs, end_idxs = self._generate_idxs(batch_size)
