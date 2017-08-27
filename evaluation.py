@@ -27,15 +27,16 @@ def evaluate(env, sess, model, render=False):
             state = env.reset()
             return reward_sum
 
-def setup(env_name, log_dir, save_videos=False):
+def setup(env_name, log_dir, record=False):
     # Create enviroment
     env = gym.make(env_name)
+    env._max_episode_steps = 2000
     state_shape = env.observation_space.shape
     num_actions = env.action_space.n
 
     # Create videos directory
     render = True
-    if save_videos:
+    if record:
         render = False
         video_dir = os.path.join(log_dir, 'videos/eval')
         if not os.path.exists(video_dir):
@@ -51,7 +52,7 @@ def setup(env_name, log_dir, save_videos=False):
     sv = tf.train.Supervisor(logdir=log_dir, summary_op=None)
     with sv.managed_session() as sess:
         while True:
-            reward = evaluate(env, sess, model, render=False)
+            reward = evaluate(env, sess, model, render=render)
             print('Episode reward: {}'.format(reward))
 
 # Maybe fetch q_values after sv has loaded graph
