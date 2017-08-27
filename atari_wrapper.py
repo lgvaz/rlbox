@@ -36,9 +36,9 @@ class AtariWrapper(Wrapper):
 
         return self.history_buffer
 
-    def _noops(self, max_noops=20):
+    def _noops(self, max_noops=30):
         ''' Do nothing for num_oops frames '''
-        num_noops = np.random.randint(0, max_noops)
+        num_noops = np.random.randint(1, max_noops)
         for _ in range(num_noops):
             state, _, _, _ = self.env.step(0)
 

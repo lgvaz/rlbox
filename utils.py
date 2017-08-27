@@ -17,7 +17,7 @@ class SimpleReplayBuffer:
 
 
 class ImgReplayBuffer:
-        def __init__(self, maxlen, history_length):
+    def __init__(self, maxlen, history_length):
         self.initialized = False
         self.maxlen = maxlen
         self.history_length = history_length
