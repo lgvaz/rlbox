@@ -111,7 +111,8 @@ class DQN:
 
         # Calculate learning rate
         if lr_decay_steps:
-            self.lr_tensor = tf.train.exponential_decay(learning_rate, self.global_step_tensor,
+            self.lr_tensor = tf.train.exponential_decay(learning_rate,
+                                                        self.global_step_tensor,
                                                         lr_decay_steps, lr_decay_rate)
         else:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
