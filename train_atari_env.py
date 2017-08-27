@@ -71,7 +71,7 @@ model = DQN(state_shape, num_actions, LEARNING_RATE,
 
 # Record videos
 env = gym.wrappers.Monitor(env, VIDEO_DIR,
-                            video_callable=lambda count: count % 100 == 0)
+                            video_callable=lambda count: count % 1000 == 0)
 state = env.reset()
 get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
