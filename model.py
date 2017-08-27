@@ -5,7 +5,7 @@ from utils import huber_loss
 
 # TODO: Choice of loss (Huber or MSE)
 class DQN:
-    def __init__(self, state_shape, num_actions, learning_rate,
+    def __init__(self, state_shape, num_actions, learning_rate, clip_norm,
                  lr_decay_steps=None, lr_decay_rate=None, gamma=0.99):
         self.state_shape = state_shape
         self.num_actions = num_actions
@@ -62,8 +62,8 @@ class DQN:
 
         # Create training operation
         # TODO: Remove hardcoded gamma
-        self.training_op = self._build_optimization(learning_rate, lr_decay_steps,
-                                                    lr_decay_rate, gamma)
+        self.training_op = self._build_optimization(learning_rate, clip_norm,
+                                                    lr_decay_steps, lr_decay_rate, gamma)
 
         self.update_target_op = self._build_target_update_op()
 
@@ -97,7 +97,7 @@ class DQN:
     def increase_global_step(self, sess):
         sess.run(self.increase_global_step_op)
 
-    def _build_optimization(self, learning_rate, lr_decay_steps, lr_decay_rate, gamma):
+    def _build_optimization(self, learning_rate, clip_norm, lr_decay_steps, lr_decay_rate, gamma):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
         q_t = tf.reduce_sum(tf.multiply(self.q_values, onehot_actions), axis=1)
@@ -118,7 +118,14 @@ class DQN:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation
         opt = tf.train.AdamOptimizer(self.lr_tensor)
-        training_op = opt.minimize(self.total_error)
+        # Clip gradients
+        online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
+        # grads = opt.compute_gradients(self.total_error, var_list=q_func_vars)
+        grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
+        clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
+                         for grad, var in grads_and_vars if grad is not None]
+        training_op = opt.apply_gradients(clipped_grads)
+        # training_op = opt.minimize(self.total_error)
 
         return training_op
 

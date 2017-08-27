@@ -10,7 +10,7 @@ from atari_wrapper import wrap_deepmind
 
 # Constants
 ENV_NAME = 'BreakoutNoFrameskip-v4'
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 1e-4
 USE_HUBER = True
 NUM_STEPS = int(40e6)
 BATCH_SIZE = 32
@@ -21,12 +21,13 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/v4'
+LOG_DIR = 'logs/breakout/v24'
 VIDEO_DIR = LOG_DIR + '/videos/train'
 LR_DECAY_RATE = None
 LR_DECAY_STEPS = None
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
+CLIP_NORM = 10
 
 # Create log directory
 if not os.path.exists(LOG_DIR):
@@ -66,7 +67,7 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = list(env.observation_space.shape) + [HISTORY_LENGTH]
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, LEARNING_RATE,
+model = DQN(state_shape, num_actions, LEARNING_RATE, CLIP_NORM,
             lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
 
 # Record videos
