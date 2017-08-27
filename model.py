@@ -97,12 +97,7 @@ class DQN:
     def increase_global_step(self, sess):
         sess.run(self.increase_global_step_op)
 
-<<<<<<< HEAD
     def _build_optimization(self, learning_rate, lr_decay_steps, lr_decay_rate, gamma):
-=======
-    def _build_optimization(self, learning_rate, clip_norm,
-                            lr_decay_steps, lr_decay_rate, gamma):
->>>>>>> 61133a3... Cleaned code a bit
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
         q_t = tf.reduce_sum(tf.multiply(self.q_values, onehot_actions), axis=1)
@@ -123,16 +118,7 @@ class DQN:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation
         opt = tf.train.AdamOptimizer(self.lr_tensor)
-<<<<<<< HEAD
         training_op = opt.minimize(self.total_error)
-=======
-        # Clip gradients
-        online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
-        grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
-        clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
-                         for grad, var in grads_and_vars if grad is not None]
-        training_op = opt.apply_gradients(clipped_grads)
->>>>>>> 61133a3... Cleaned code a bit
 
         return training_op
 
@@ -169,9 +155,11 @@ class DQN:
         return run_op
 
     def summary_scalar(self, sess, sv, name, value):
+        # writer = sv.summary_writer
         summary = tf.Summary(value=[
             tf.Summary.Value(tag=name, simple_value=value),
         ])
+        # writer.add_summary(summary, tf.train.global_step(sess, self.global_step_tensor))
         sv.summary_computed(sess, summary)
 
     def predict(self, sess, states):
