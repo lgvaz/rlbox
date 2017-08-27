@@ -48,7 +48,7 @@ class ImgReplayBuffer:
 
     def last_state(self):
         end_idx = self.current_idx
-        start_idx = end_idx - self.history_length
+        start_idx = max(0, end_idx - self.history_length)
 
         for idx in range(start_idx, end_idx):
             if self.dones[idx]:
@@ -57,7 +57,7 @@ class ImgReplayBuffer:
         state = self.states[start_idx:end_idx]
 
         missing_frames = self.history_length - (end_idx - start_idx)
-        if missing_frames:
+        if missing_frames > 0:
             zero_frames = np.zeros([missing_frames] + list(state.shape[1:]))
             return np.concatenate((zero_frames, state), axis=0).transpose(1, 2, 0)
         else:
