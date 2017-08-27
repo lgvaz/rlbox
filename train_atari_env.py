@@ -5,12 +5,12 @@ import tensorflow as tf
 from utils import *
 from model import DQN
 from evaluation import evaluate
-from atari_wrapper import AtariWrapper
+from atari_wrapper import wrap_deepmind
 
 
 # Constants
-ENV_NAME = 'Breakout-v0'
-LEARNING_RATE = 1e-3
+ENV_NAME = 'BreakoutNoFrameskip-v4'
+LEARNING_RATE = 3e-4
 USE_HUBER = True
 NUM_STEPS = int(40e6)
 BATCH_SIZE = 32
@@ -21,10 +21,10 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/v0'
+LOG_DIR = 'logs/breakout/v4'
 VIDEO_DIR = LOG_DIR + '/videos/train'
-LR_DECAY_RATE = 0.05
-LR_DECAY_STEPS = 15e6
+LR_DECAY_RATE = None
+LR_DECAY_STEPS = None
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
 
@@ -45,7 +45,7 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
-env = AtariWrapper(env)
+env = wrap_deepmind(env)
 
 buffer = ImgReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
 # Populate replay memory
