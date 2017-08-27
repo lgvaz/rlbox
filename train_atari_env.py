@@ -45,7 +45,7 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
-env = AtariWrapper(env)
+env = AtariWrapper(env, HISTORY_LENGTH)
 
 buffer = ImgReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
 # Populate replay memory
@@ -54,9 +54,7 @@ state = env.reset()
 for _ in range(MIN_REPLAYS):
     action = env.action_space.sample()
     next_state, reward, done, _ = env.step(action)
-    idx = buffer.add_state(state)
-    buffer.add_effect(idx, action, reward, done)
-    # buffer.add(state[..., -1], action, reward, done)
+    buffer.add(state[..., -1], action, reward, done)
 
     # Update state
     state = next_state
@@ -64,7 +62,7 @@ for _ in range(MIN_REPLAYS):
         state = env.reset()
 
 # Create DQN model
-state_shape = list(env.observation_space.shape) + [HISTORY_LENGTH]
+state_shape = list(env.observation_space.shape)
 num_actions = env.action_space.n
 model = DQN(state_shape, num_actions, LEARNING_RATE,
             lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
@@ -86,9 +84,6 @@ with sv.managed_session() as sess:
     global_step = tf.train.global_step(sess, model.global_step_tensor)
     for i_step in range(global_step, NUM_STEPS + 1):
         model.increase_global_step(sess)
-        # Store state
-        idx = buffer.add_state(state)
-        state = buffer.last_state()
         # Choose an action
         epsilon = get_epsilon(i_step)
         if np.random.random() <= epsilon:
@@ -101,8 +96,8 @@ with sv.managed_session() as sess:
         next_state, reward, done, _ = env.step(action)
         reward_sum += reward
 
-        # Store effects
-        buffer.add_effect(idx, action, reward, done)
+        # Store experience
+        buffer.add(state[..., -1], action, reward, done)
 
         # Update state
         state = next_state
