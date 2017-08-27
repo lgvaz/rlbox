@@ -11,18 +11,19 @@ from evaluation import evaluate
 # ENV_NAME = 'CartPole-v0'
 # LEARNING_RATE = 1e-3
 # USE_HUBER = True
-# NUM_STEPS = int(1e5)
+# NUM_STEPS = int(6e5)
 # BATCH_SIZE = 64
 # GAMMA = .99
-# UPDATE_TARGET_STEPS = int(500)
-# FINAL_EPSILON = 0.02
-# STOP_EXPLORATION = int(1e4)
-# LOG_STEPS = int(2000)
-# MAX_REPLAYS = int(5e4)
+# UPDATE_TARGET_STEPS = int(200)
+# FINAL_EPSILON = 0.1
+# STOP_EXPLORATION = int(1e5)
+# LOG_STEPS = int(5e3)
+# MAX_REPLAYS = int(1e5)
 # MIN_REPLAYS = int(1e4)
-# LOG_DIR = 'logs/cart_pole/v28'
-# VIDEO_DIR = LOG_DIR + '/videos'
-
+# LOG_DIR = 'logs/cart_pole/v2'
+# VIDEO_DIR = LOG_DIR + '/videos/train'
+# LR_DECAY_RATE = 0.05
+# LR_DECAY_STEPS = 3e5
 
 # # Constants
 # ENV_NAME = 'MountainCar-v0'
@@ -41,23 +42,41 @@ from evaluation import evaluate
 # VIDEO_DIR = LOG_DIR + '/videos'
 
 
+# # Constants
+# ENV_NAME = 'LunarLander-v2'
+# LEARNING_RATE = 1e-3
+# USE_HUBER = True
+# NUM_STEPS = int(6e5)
+# BATCH_SIZE = 64
+# GAMMA = .99
+# UPDATE_TARGET_STEPS = int(400)
+# FINAL_EPSILON = 0.1
+# STOP_EXPLORATION = int(1e4)
+# LOG_STEPS = int(5e3)
+# MAX_REPLAYS = int(1e4)
+# MIN_REPLAYS = int(1e3)
+# LOG_DIR = 'logs/lunar_lander/v11_0'
+# VIDEO_DIR = LOG_DIR + '/videos/train'
+# LR_DECAY_RATE = 0.05
+# LR_DECAY_STEPS = 3e5
+
 # Constants
-ENV_NAME = 'LunarLander-v2'
+ENV_NAME = 'Acrobot-v1'
 LEARNING_RATE = 1e-3
 USE_HUBER = True
-NUM_STEPS = int(1e6)
+NUM_STEPS = int(6e5)
 BATCH_SIZE = 64
 GAMMA = .99
-UPDATE_TARGET_STEPS = int(600)
+UPDATE_TARGET_STEPS = int(400)
 FINAL_EPSILON = 0.1
-STOP_EXPLORATION = int(1e5)
+STOP_EXPLORATION = int(1e4)
 LOG_STEPS = int(5e3)
-MAX_REPLAYS = int(5e5)
-MIN_REPLAYS = int(1e5)
-LOG_DIR = 'logs/lunar_lander/v3_0'
+MAX_REPLAYS = int(1e4)
+MIN_REPLAYS = int(1e3)
+LOG_DIR = 'logs/acrobot/v2'
 VIDEO_DIR = LOG_DIR + '/videos/train'
-LR_DECAY_RATE = 0.1
-
+LR_DECAY_RATE = 0.05
+LR_DECAY_STEPS = 3e5
 
 # Create log directory
 if not os.path.exists(LOG_DIR):
@@ -98,14 +117,14 @@ for _ in range(MIN_REPLAYS):
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
 model = DQN(state_shape, num_actions, LEARNING_RATE,
-            lr_decay_steps=NUM_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
+            lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
 
 # Record videos
 env = gym.wrappers.Monitor(env, VIDEO_DIR,
                            video_callable=lambda count: count % 100 == 0)
 state = env.reset()
-# get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
-get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+# get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # Create logs variables
 summary_op = model.create_summaries()
 reward_sum = 0
