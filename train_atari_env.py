@@ -9,10 +9,10 @@ from atari_wrapper import AtariWrapper
 
 
 # Constants
-ENV_NAME = 'Pong-v0'
+ENV_NAME = 'Breakout-v0'
 LEARNING_RATE = 1e-3
 USE_HUBER = True
-NUM_STEPS = int(50001)
+NUM_STEPS = int(40e6)
 BATCH_SIZE = 32
 GAMMA = .99
 UPDATE_TARGET_STEPS = int(1e4)
@@ -21,7 +21,7 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/pong/v11'
+LOG_DIR = 'logs/breakout/v0'
 VIDEO_DIR = LOG_DIR + '/videos/train'
 LR_DECAY_RATE = 0.05
 LR_DECAY_STEPS = 15e6
@@ -70,8 +70,8 @@ model = DQN(state_shape, num_actions, LEARNING_RATE,
             lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
 
 # Record videos
-# env = gym.wrappers.Monitor(env, VIDEO_DIR,
-                            # video_callable=lambda count: count % 100 == 0)
+env = gym.wrappers.Monitor(env, VIDEO_DIR,
+                            video_callable=lambda count: count % 100 == 0)
 state = env.reset()
 get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
@@ -85,13 +85,17 @@ print('Started training...')
 with sv.managed_session() as sess:
     global_step = tf.train.global_step(sess, model.global_step_tensor)
     for i_step in range(global_step, NUM_STEPS + 1):
+        model.increase_global_step(sess)
         # Store state
         idx = buffer.add_state(state)
         state = buffer.last_state()
         # Choose an action
-        Q_values = model.predict(sess, state[np.newaxis])
         epsilon = get_epsilon(i_step)
-        action = egreedy_police(Q_values, epsilon)
+        if np.random.random() <= epsilon:
+            action = env.action_space.sample()
+        else:
+            Q_values = model.predict(sess, state[np.newaxis])
+            action =  np.argmax(np.squeeze(Q_values))
 
         # Execute action
         next_state, reward, done, _ = env.step(action)
@@ -99,7 +103,6 @@ with sv.managed_session() as sess:
 
         # Store effects
         buffer.add_effect(idx, action, reward, done)
-        # buffer.add(state[..., -1], action, reward, done)
 
         # Update state
         state = next_state

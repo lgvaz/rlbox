@@ -10,6 +10,9 @@ class DQN:
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
+        self.increase_global_step_op = tf.assign(self.global_step_tensor,
+                                                 self.global_step_tensor + 1,
+                                                 name='increase_global_step')
 
         if len(state_shape) == 3:
             state_type = tf.uint8
@@ -91,6 +94,9 @@ class DQN:
 
             return output
 
+    def increase_global_step(self, sess):
+        sess.run(self.increase_global_step_op)
+
     def _build_optimization(self, learning_rate, lr_decay_steps, lr_decay_rate, gamma):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
@@ -111,7 +117,7 @@ class DQN:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation
         opt = tf.train.AdamOptimizer(self.lr_tensor)
-        training_op = opt.minimize(self.total_error, global_step=self.global_step_tensor)
+        training_op = opt.minimize(self.total_error)
 
         return training_op
 
