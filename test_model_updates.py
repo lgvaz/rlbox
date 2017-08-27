@@ -5,18 +5,20 @@ from model import DQN
 
 # TODO: Change print statements to asserts
 # TODO: Create fake states for imgs (need to be uint8)
-# STATE_SHAPE = [84, 84, 1]
-# NUM_ACTIONS = 3
-# LEARNING_RATE = 1e-3
-
-STATE_SHAPE = [8]
+STATE_SHAPE = [84, 84, 4]
 NUM_ACTIONS = 3
-# A higher learning rate can be used for simple envs
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-3
+fake_states = np.random.randint(0, 255, size=[3] + STATE_SHAPE, dtype=np.uint8)
+fake_target_states = np.random.randint(0, 255, size=[3] + STATE_SHAPE, dtype=np.uint8)
+
+# STATE_SHAPE = [8]
+# NUM_ACTIONS = 3
+# # A higher learning rate can be used for simple envs
+# LEARNING_RATE = 1e-2
+# fake_states = np.random.random([3] + STATE_SHAPE)
+# fake_target_states = np.random.random([3] + STATE_SHAPE)
 
 
-fake_states = np.random.random([3] + STATE_SHAPE)
-fake_target_states = np.random.random([3] + STATE_SHAPE)
 fake_rewards = np.array([100, 100, 100])
 fake_dones = np.array([1, 1, 1])
 
