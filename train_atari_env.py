@@ -4,13 +4,12 @@ import numpy as np
 import tensorflow as tf
 from utils import *
 from model import DQN
-from evaluation import evaluate
 from atari_wrapper import wrap_deepmind
 
 
 # Constants
 ENV_NAME = 'BreakoutNoFrameskip-v4'
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-3
 USE_HUBER = True
 NUM_STEPS = int(40e6)
 BATCH_SIZE = 32
@@ -21,10 +20,10 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/v5'
+LOG_DIR = 'logs/breakout/v2'
 VIDEO_DIR = LOG_DIR + '/videos/train'
-LR_DECAY_RATE = None
-LR_DECAY_STEPS = None
+LR_DECAY_RATE = 0.05
+LR_DECAY_STEPS = 4e6
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
 CLIP_NORM = 10
@@ -46,7 +45,9 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
-env = wrap_deepmind(env, history_length=HISTORY_LENGTH)
+env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,
+                                           video_callable=lambda x: x % 1000 == 0)
+env = wrap_deepmind(env_monitor_wrapped, frame_stack=HISTORY_LENGTH)
 
 buffer = ImgReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
 # Populate replay memory
@@ -56,7 +57,6 @@ for _ in range(MIN_REPLAYS):
     action = env.action_space.sample()
     next_state, reward, done, _ = env.step(action)
     buffer.add(state[..., -1], action, reward, done)
-
     # Update state
     state = next_state
     if done:
@@ -68,9 +68,6 @@ num_actions = env.action_space.n
 model = DQN(state_shape, num_actions, LEARNING_RATE, CLIP_NORM,
             lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
 
-# Record videos
-env = gym.wrappers.Monitor(env, VIDEO_DIR,
-                            video_callable=lambda count: count % 3000 == 0)
 state = env.reset()
 get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
@@ -114,19 +111,22 @@ with sv.managed_session() as sess:
 
         # Update weights of target model
         if i_step % UPDATE_TARGET_STEPS == 0:
-            print('Updating target model...')
+            # print('Updating target model...')
             model.update_target_net(sess)
 
         # Display logs
         if i_step % LOG_STEPS == 0:
-            # eval_reward = np.mean([evaluate(env_eval, sess, model) for _ in range(5)])
+            ep_rewards = env_monitor_wrapped.get_episode_rewards()
+            num_episodes = len(ep_rewards)
+            mean_ep_rewards = np.mean(ep_rewards[-50:])
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
-            model.summary_scalar(sess, sv, 'reward_train', mean_reward)
-            # model.summary_scalar(sess, sv, 'reward_eval', eval_reward)
+            model.summary_scalar(sess, sv, 'reward_by_episode(unclipped)', mean_ep_rewards)
+            model.summary_scalar(sess, sv, 'reward_by_life(clipped)', mean_reward)
             model.summary_scalar(sess, sv, 'epsilon', epsilon)
             print('[Step: {}]'.format(i_step), end='')
-            print('[Train reward: {:.2f}]'.format(mean_reward), end='')
-            # print('[Eval reward: {:.2f}]'.format(eval_reward), end='')
+            print('[Episode: {}]'.format(num_episodes), end='')
             print('[Epsilon: {:.2f}]'.format(epsilon))
+            print('[Life reward: {:.2f}]'.format(mean_reward), end='')
+            print('[Episode reward: {:.2f}]'.format(mean_ep_rewards), end='\n\n')
