@@ -27,7 +27,7 @@ def evaluate(env, sess, model, render=False):
             state = env.reset()
             return reward_sum
 
-def setup(env_name, log_dir, record=False):
+def setup(env_name, log_dir, atari_wrap=True, record=False):
     # Create enviroment
     env = gym.make(env_name)
     # Create videos directory
@@ -40,11 +40,11 @@ def setup(env_name, log_dir, record=False):
         env = gym.wrappers.Monitor(env, video_dir,
                                    video_callable=lambda x: x % 2 == 0,
                                    resume=True)
-    env = wrap_deepmind(env)#, episodic_life=False, clip_reward=False)
+    if atari_wrap:
+        env = wrap_deepmind(env)
     # env._max_episode_steps = 2000
     state_shape = env.observation_space.shape
     num_actions = env.action_space.n
-
 
     # Create model
     # TODO: Import model from metagraph
