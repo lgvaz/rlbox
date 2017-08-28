@@ -34,7 +34,7 @@ def setup(env_name, log_dir, atari_wrap=True, render=True, record=False):
     # Create enviroment
     env = gym.make(env_name)
     # Create videos directory
-    video_dir = os.path.join(log_dir, 'videos/eval_2/')
+    video_dir = os.path.join(log_dir, 'videos/eval/')
     if not os.path.exists(video_dir):
         os.makedirs(video_dir)
     env_monitor_wrap = gym.wrappers.Monitor(env, video_dir, resume=True,
