@@ -126,4 +126,3 @@ def egreedy_police(Q_values, epsilon):
         return np.random.choice(np.arange(num_actions))
     else:
         return np.argmax(np.squeeze(Q_values))
-
