@@ -46,7 +46,7 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 # Create new enviroment
 env = gym.make(ENV_NAME)
 env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,
-                                           video_callable=lambda x: x % 1000 == 0)
+                                           video_callable=lambda x: x % 500 == 0)
 env = wrap_deepmind(env_monitor_wrapped, frame_stack=HISTORY_LENGTH)
 
 buffer = ImgReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
