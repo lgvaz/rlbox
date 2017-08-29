@@ -4,7 +4,7 @@ import fire
 import numpy as np
 import tensorflow as tf
 from model import DQN
-from utils import egreedy_police
+from atari_wrapper import wrap_deepmind
 
 
 def evaluate(env, sess, model, render=False):
@@ -14,8 +14,11 @@ def evaluate(env, sess, model, render=False):
         if render:
             env.render()
         # Choose best action
-        Q_values = model.predict(sess, state[np.newaxis])
-        action = egreedy_police(Q_values, epsilon=0)
+        if np.random.random() <= 0.05:
+            action = env.action_space.sample()
+        else:
+            Q_values = model.predict(sess, state[np.newaxis])
+            action = np.argmax(Q_values)
 
         # Execute action
         next_state, reward, done, _ = env.step(action)
@@ -27,33 +30,32 @@ def evaluate(env, sess, model, render=False):
             state = env.reset()
             return reward_sum
 
-def setup(env_name, log_dir, record=False):
+def setup(env_name, log_dir, atari_wrap=True, render=True, record=False):
     # Create enviroment
     env = gym.make(env_name)
-    env._max_episode_steps = 2000
+    # Create videos directory
+    video_dir = os.path.join(log_dir, 'videos/eval/')
+    if not os.path.exists(video_dir):
+        os.makedirs(video_dir)
+    env_monitor_wrap = gym.wrappers.Monitor(env, video_dir, resume=True,
+                                            video_callable=lambda x: record)
+    if atari_wrap:
+        env = wrap_deepmind(env_monitor_wrap)
+    # env._max_episode_steps = 2000
     state_shape = env.observation_space.shape
     num_actions = env.action_space.n
 
-    # Create videos directory
-    render = True
-    if record:
-        render = False
-        video_dir = os.path.join(log_dir, 'videos/eval')
-        if not os.path.exists(video_dir):
-            os.makedirs(video_dir)
-        env = gym.wrappers.Monitor(env, video_dir,
-                                   video_callable=lambda x: x % 2 == 0)
-
     # Create model
     # TODO: Import model from metagraph
-    model = DQN(state_shape, num_actions, learning_rate=0)
+    model = DQN(state_shape, num_actions, learning_rate=0, clip_norm=10)
 
     # Reload graph
     sv = tf.train.Supervisor(logdir=log_dir, summary_op=None)
     with sv.managed_session() as sess:
         while True:
             reward = evaluate(env, sess, model, render=render)
-            print('Episode reward: {}'.format(reward))
+            print('Life reward: {}'.format(reward))
+
 
 # Maybe fetch q_values after sv has loaded graph
 if __name__ == '__main__':

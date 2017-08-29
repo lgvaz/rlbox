@@ -1,65 +1,56 @@
 '''
-Copied from
+Copied from:
+https://github.com/berkeleydeeprlcourse/homework/blob/master/sp17_hw/hw3/atari_wrappers.py
 https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
 '''
 
-import numpy as np
+
 from collections import deque
-import gym
 import cv2
+import numpy as np
+import gym
 from gym import spaces
 
 
 class NoopResetEnv(gym.Wrapper):
-    def __init__(self, env, noop_max=30):
+    def __init__(self, env=None, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
         No-op is assumed to be action 0.
         """
-        gym.Wrapper.__init__(self, env)
+        super(NoopResetEnv, self).__init__(env)
         self.noop_max = noop_max
-        self.override_num_noops = None
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
     def _reset(self):
         """ Do no-op action for a number of steps in [1, noop_max]."""
         self.env.reset()
-        if self.override_num_noops is not None:
-            noops = self.override_num_noops
-        else:
-            noops = self.unwrapped.np_random.randint(1, self.noop_max + 1) #pylint: disable=E1101
-        assert noops > 0
-        obs = None
+        noops = np.random.randint(1, self.noop_max + 1)
         for _ in range(noops):
-            obs, _, done, _ = self.env.step(0)
-            if done:
-                obs = self.env.reset()
+            obs, _, _, _ = self.env.step(0)
         return obs
 
 class FireResetEnv(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env=None):
         """Take action on reset for environments that are fixed until firing."""
-        gym.Wrapper.__init__(self, env)
+        super(FireResetEnv, self).__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
     def _reset(self):
         self.env.reset()
-        obs, _, done, _ = self.env.step(1)
-        if done:
-            self.env.reset()
-        obs, _, done, _ = self.env.step(2)
-        if done:
-            self.env.reset()
+        obs, _, _, _ = self.env.step(1)
+        obs, _, _, _ = self.env.step(2)
         return obs
 
 class EpisodicLifeEnv(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env=None):
         """Make end-of-life == end-of-episode, but only reset on true game over.
         Done by DeepMind for the DQN and co. since it helps value estimation.
         """
-        gym.Wrapper.__init__(self, env)
+        super(EpisodicLifeEnv, self).__init__(env)
         self.lives = 0
         self.was_real_done  = True
+        self.was_real_reset = False
 
     def _step(self, action):
         obs, reward, done, info = self.env.step(action)
@@ -82,22 +73,23 @@ class EpisodicLifeEnv(gym.Wrapper):
         """
         if self.was_real_done:
             obs = self.env.reset()
+            self.was_real_reset = True
         else:
             # no-op step to advance from terminal/lost life state
             obs, _, _, _ = self.env.step(0)
+            self.was_real_reset = False
         self.lives = self.env.unwrapped.ale.lives()
         return obs
 
 class MaxAndSkipEnv(gym.Wrapper):
-    def __init__(self, env, skip=4):
+    def __init__(self, env=None, skip=4):
         """Return only every `skip`-th frame"""
-        gym.Wrapper.__init__(self, env)
+        super(MaxAndSkipEnv, self).__init__(env)
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = deque(maxlen=2)
         self._skip       = skip
 
     def _step(self, action):
-        """Repeat action, sum reward, and max over last observations."""
         total_reward = 0.0
         done = None
         for _ in range(self._skip):
@@ -106,6 +98,7 @@ class MaxAndSkipEnv(gym.Wrapper):
             total_reward += reward
             if done:
                 break
+
         max_frame = np.max(np.stack(self._obs_buffer), axis=0)
 
         return max_frame, total_reward, done, info
@@ -117,29 +110,35 @@ class MaxAndSkipEnv(gym.Wrapper):
         self._obs_buffer.append(obs)
         return obs
 
-class ClipRewardEnv(gym.RewardWrapper):
-    def _reward(self, reward):
-        """Bin reward to {+1, 0, -1} by its sign."""
-        return np.sign(reward)
+def _process_frame84(frame):
+    img = np.reshape(frame, [210, 160, 3]).astype(np.float32)
+    img = img[:, :, 0] * 0.299 + img[:, :, 1] * 0.587 + img[:, :, 2] * 0.114
+    resized_screen = cv2.resize(img, (84, 110),  interpolation=cv2.INTER_LINEAR)
+    x_t = resized_screen[18:102, :]
+    x_t = np.reshape(x_t, [84, 84, 1])
+    return x_t.astype(np.uint8)
 
-class WarpFrame(gym.ObservationWrapper):
-    def __init__(self, env):
-        """Warp frames to 84x84 as done in the Nature paper and later work."""
-        gym.ObservationWrapper.__init__(self, env)
-        self.res = 84
-        self.observation_space = spaces.Box(low=0, high=255, shape=(self.res, self.res))
+class ProcessFrame84(gym.Wrapper):
+    def __init__(self, env=None):
+        super(ProcessFrame84, self).__init__(env)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(84, 84, 1))
 
-    def _observation(self, frame):
-        img = np.reshape(frame, [210, 160, 3]).astype(np.float32)
-        img = img[:, :, 0] * 0.299 + img[:, :, 1] * 0.587 + img[:, :, 2] * 0.114
-        resized_screen = cv2.resize(img, (84, 110),  interpolation=cv2.INTER_LINEAR)
-        x_t = resized_screen[18:102, :]
-        return x_t.astype(np.uint8)
+    def _step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        return _process_frame84(obs), reward, done, info
+
+    def _reset(self):
+        return _process_frame84(self.env.reset())
+
+class ClippedRewardsWrapper(gym.Wrapper):
+    def _step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        return obs, np.sign(reward), done, info
 
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):
         """Buffer observations and stack across channels (last axis)."""
-        gym.Wrapper.__init__(self, env)
+        super(FrameStack, self).__init__(env)
         self.k = k
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
@@ -161,17 +160,15 @@ class FrameStack(gym.Wrapper):
         assert len(self.frames) == self.k
         return np.concatenate(self.frames, axis=2)
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True):
-    """Configure environment for DeepMind-style Atari.
-    Note: this does not include frame stacking!"""
-    assert 'NoFrameskip' in env.spec.id  # required for DeepMind-style skip
-    if episode_life:
-        env = EpisodicLifeEnv(env)
+
+def wrap_deepmind(env, frame_stack=4, frame_skip=4):
+    assert 'NoFrameskip' in env.spec.id
+    env = EpisodicLifeEnv(env)
     env = NoopResetEnv(env, noop_max=30)
-    env = MaxAndSkipEnv(env, skip=4)
+    env = MaxAndSkipEnv(env, skip=frame_skip)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    env = WarpFrame(env)
-    if clip_rewards:
-        env = ClipRewardEnv(env)
+    env = ProcessFrame84(env)
+    env = FrameStack(env, frame_stack)
+    env = ClippedRewardsWrapper(env)
     return env
