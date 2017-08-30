@@ -120,7 +120,7 @@ class DQN:
         else:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation
-        opt = tf.train.AdamOptimizer(self.lr_tensor)
+        opt = tf.train.AdamOptimizer(self.lr_tensor, epsilon=1e-4)
         # Clip gradients
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
         grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
