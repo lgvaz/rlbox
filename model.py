@@ -5,8 +5,8 @@ from utils import huber_loss
 
 # TODO: Choice of loss (Huber or MSE)
 class DQN:
-    def __init__(self, state_shape, num_actions, learning_rate, clip_norm,
-                 lr_decay_steps=None, lr_decay_rate=None, gamma=0.99):
+    def __init__(self, state_shape, num_actions, learning_rate, clip_norm, gamma=0.99,
+                 lr_decay_steps=None, lr_decay_rate=None, min_learning_rate=5e-5):
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
@@ -62,8 +62,9 @@ class DQN:
 
         # Create training operation
         # TODO: Remove hardcoded gamma
-        self.training_op = self._build_optimization(learning_rate, clip_norm,
-                                                    lr_decay_steps, lr_decay_rate, gamma)
+        self.training_op = self._build_optimization(learning_rate, clip_norm, gamma,
+                                                    lr_decay_steps, lr_decay_rate,
+                                                    min_learning_rate)
 
         self.update_target_op = self._build_target_update_op()
 
@@ -97,8 +98,8 @@ class DQN:
     def increase_global_step(self, sess):
         sess.run(self.increase_global_step_op)
 
-    def _build_optimization(self, learning_rate, clip_norm,
-                            lr_decay_steps, lr_decay_rate, gamma):
+    def _build_optimization(self, learning_rate, clip_norm, gamma,
+                            lr_decay_steps, lr_decay_rate, min_learning_rate):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
         q_t = tf.reduce_sum(tf.multiply(self.q_values, onehot_actions), axis=1)
@@ -112,9 +113,10 @@ class DQN:
 
         # Calculate learning rate
         if lr_decay_steps and lr_decay_rate:
-            self.lr_tensor = tf.train.exponential_decay(learning_rate,
-                                                        self.global_step_tensor,
-                                                        lr_decay_steps, lr_decay_rate)
+            self.lr_tensor = (min_learning_rate
+                              + tf.train.exponential_decay(learning_rate,
+                                                           self.global_step_tensor,
+                                                           lr_decay_steps, lr_decay_rate))
         else:
             self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation

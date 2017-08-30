@@ -6,6 +6,7 @@ import tensorflow as tf
 from model import DQN
 from atari_wrapper import wrap_deepmind
 
+# TODO: Register the Q values as the agent plays, then plot them. (Also store the states)
 
 def evaluate(env, sess, model, render=False):
     state = env.reset()
