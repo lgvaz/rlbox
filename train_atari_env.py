@@ -9,7 +9,7 @@ from atari_wrapper import wrap_deepmind
 
 # Constants
 ENV_NAME = 'BreakoutNoFrameskip-v4'
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 USE_HUBER = True
 NUM_STEPS = int(40e6)
 BATCH_SIZE = 32
@@ -20,10 +20,10 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/v2'
+LOG_DIR = 'logs/breakout/v4'
 VIDEO_DIR = LOG_DIR + '/videos/train'
-LR_DECAY_RATE = 0.05
-LR_DECAY_STEPS = 4e6
+LR_DECAY_RATE = None
+LR_DECAY_STEPS = None
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
 CLIP_NORM = 10
@@ -41,7 +41,9 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
     print('Final epsilon: {}'.format(FINAL_EPSILON), file=f)
     print('Stop exploration: {}'.format(STOP_EXPLORATION), file=f)
     print('Memory size: {}'.format(MAX_REPLAYS), file=f)
-    print('Learning rate decay'.format(LR_DECAY_RATE), file=f)
+    print('Learning rate decay: {}'.format(LR_DECAY_RATE), file=f)
+    print('Learning rate decay steps: {}'.format(LR_DECAY_STEPS), file=f)
+    print('Clip norm: {}'.format(CLIP_NORM), file=f)
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
@@ -73,6 +75,7 @@ get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # Create logs variables
 summary_op = model.create_summaries()
+num_episodes = 0
 reward_sum = 0
 rewards = []
 
@@ -88,7 +91,7 @@ with sv.managed_session() as sess:
             action = env.action_space.sample()
         else:
             Q_values = model.predict(sess, state[np.newaxis])
-            action =  np.argmax(np.squeeze(Q_values))
+            action = np.argmax(np.squeeze(Q_values))
 
         # Execute action
         next_state, reward, done, _ = env.step(action)
@@ -117,8 +120,10 @@ with sv.managed_session() as sess:
         # Display logs
         if i_step % LOG_STEPS == 0:
             ep_rewards = env_monitor_wrapped.get_episode_rewards()
+            num_episodes_old = num_episodes
             num_episodes = len(ep_rewards)
-            mean_ep_rewards = np.mean(ep_rewards[-50:])
+            num_new_episodes = num_episodes - num_episodes_old
+            mean_ep_rewards = np.mean(ep_rewards[-num_new_episodes:])
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)

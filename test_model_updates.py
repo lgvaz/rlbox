@@ -4,7 +4,6 @@ from model import DQN
 
 
 # TODO: Change print statements to asserts
-# TODO: Create fake states for imgs (need to be uint8)
 STATE_SHAPE = [84, 84, 4]
 NUM_ACTIONS = 3
 LEARNING_RATE = 1e-3
