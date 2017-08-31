@@ -5,8 +5,7 @@ from utils import huber_loss
 
 # TODO: Choice of loss (Huber or MSE)
 class DQN:
-    def __init__(self, state_shape, num_actions, learning_rate, clip_norm, gamma=0.99,
-                 lr_decay_steps=None, lr_decay_rate=None, min_learning_rate=5e-5):
+    def __init__(self, state_shape, num_actions, clip_norm, gamma=0.99):
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
@@ -44,6 +43,11 @@ class DQN:
             shape=[None],
             dtype=tf.float32
         )
+        self.learning_rate_ph = tf.placeholder(
+            name='learning_rate_ph',
+            shape=[],
+            dtype=tf.float32
+        )
         self.global_step_ph = tf.placeholder(
             name='global_step_ph',
             shape=[],
@@ -69,9 +73,7 @@ class DQN:
             self.q_target = self._build_dense_model(self.states_tp1, 'target')
 
         # Create training operation
-        self.training_op = self._build_optimization(learning_rate, clip_norm, gamma,
-                                                    lr_decay_steps, lr_decay_rate,
-                                                    min_learning_rate)
+        self.training_op = self._build_optimization(clip_norm, gamma)
 
         self.update_target_op = self._build_target_update_op()
 
@@ -109,8 +111,7 @@ class DQN:
     def set_global_step(self, sess, step):
         sess.run(self.set_global_step_op, feed_dict={self.global_step_ph: step})
 
-    def _build_optimization(self, learning_rate, clip_norm, gamma,
-                            lr_decay_steps, lr_decay_rate, min_learning_rate):
+    def _build_optimization(self, clip_norm, gamma):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
         q_t = tf.reduce_sum(tf.multiply(self.q_values, onehot_actions), axis=1)
@@ -122,16 +123,8 @@ class DQN:
         errors = huber_loss(q_t, td_target)
         self.total_error = tf.reduce_mean(errors)
 
-        # Calculate learning rate
-        if lr_decay_steps and lr_decay_rate:
-            self.lr_tensor = (min_learning_rate
-                              + tf.train.exponential_decay(learning_rate,
-                                                           self.global_step_tensor,
-                                                           lr_decay_steps, lr_decay_rate))
-        else:
-            self.lr_tensor = tf.constant(learning_rate, dtype=tf.float32)
         # Create training operation
-        opt = tf.train.AdamOptimizer(self.lr_tensor, epsilon=1e-4)
+        opt = tf.train.AdamOptimizer(self.learning_rate_ph, epsilon=1e-4)
         # Clip gradients
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
         grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
@@ -154,7 +147,6 @@ class DQN:
     # TODO: Maybe integrate summary writing in self.train
     def create_summaries(self):
         tf.summary.scalar('loss', self.total_error)
-        tf.summary.scalar('learning_rate', self.lr_tensor)
         tf.summary.scalar('Q_mean', tf.reduce_mean(self.q_values))
         tf.summary.scalar('Q_max', tf.reduce_max(self.q_values))
         tf.summary.histogram('Q_values', self.q_values)
@@ -185,8 +177,9 @@ class DQN:
     def target_predict(self, sess, states):
         return sess.run(self.q_target, feed_dict={self.states_tp1: states})
 
-    def train(self, sess, states_t, states_tp1, actions, rewards, dones):
+    def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
+            self.learning_rate_ph: learning_rate,
             self.states_t: states_t,
             self.states_tp1: states_tp1,
             self.actions: actions,

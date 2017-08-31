@@ -119,11 +119,12 @@ def linear_epsilon_decay(epsilon_final, stop_exploration, epsilon_start=1):
 
     return get_epsilon
 
-def piecewise_linear(boundaries, values, initial_epsilon=1):
+
+def piecewise_linear(boundaries, values, initial_value=1):
     ''' Linear interpolates between boundaries '''
     boundaries = [0] + boundaries
-    final_epsilons = [initial_epsilon * value for value in values]
-    final_epsilons = [initial_epsilon] + final_epsilons
+    final_epsilons = [initial_value * value for value in values]
+    final_epsilons = [initial_value] + final_epsilons
 
     decay_steps = [end_step - start_step for start_step, end_step
                    in zip(boundaries[:-1], boundaries[1:])]
