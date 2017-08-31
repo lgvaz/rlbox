@@ -73,6 +73,7 @@ model = DQN(state_shape, num_actions, LEARNING_RATE, CLIP_NORM,
 state = env.reset()
 get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = piecewise_linear([1e6, 24e6], [0.1, 0.01, 0.01])
 # Create logs variables
 summary_op = model.create_summaries()
 num_episodes = 0
@@ -83,8 +84,8 @@ sv = tf.train.Supervisor(logdir=LOG_DIR, summary_op=None)
 print('Started training...')
 with sv.managed_session() as sess:
     global_step = tf.train.global_step(sess, model.global_step_tensor)
-    for i_step in range(global_step, NUM_STEPS + 1):
-        model.increase_global_step(sess)
+    for i_step in range(global_step * LEARNING_FREQ, NUM_STEPS + 1):
+        # model.increase_global_step(sess)
         # Choose an action
         epsilon = get_epsilon(i_step)
         if np.random.random() <= epsilon:
@@ -114,7 +115,6 @@ with sv.managed_session() as sess:
 
         # Update weights of target model
         if i_step % UPDATE_TARGET_STEPS == 0:
-            # print('Updating target model...')
             model.update_target_net(sess)
 
         # Display logs

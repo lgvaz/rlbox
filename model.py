@@ -61,7 +61,6 @@ class DQN:
             self.q_target = self._build_dense_model(self.states_tp1, 'target')
 
         # Create training operation
-        # TODO: Remove hardcoded gamma
         self.training_op = self._build_optimization(learning_rate, clip_norm, gamma,
                                                     lr_decay_steps, lr_decay_rate,
                                                     min_learning_rate)
@@ -126,7 +125,7 @@ class DQN:
         grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
         clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
                          for grad, var in grads_and_vars if grad is not None]
-        training_op = opt.apply_gradients(clipped_grads)
+        training_op = opt.apply_gradients(clipped_grads, global_step=self.global_step_tensor)
 
         return training_op
 
