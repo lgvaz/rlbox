@@ -10,9 +10,6 @@ class DQN:
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
-        self.increase_global_step_op = tf.assign(self.global_step_tensor,
-                                                 self.global_step_tensor + 1,
-                                                 name='increase_global_step')
 
         if len(state_shape) == 3:
             state_type = tf.uint8
@@ -47,7 +44,18 @@ class DQN:
             shape=[None],
             dtype=tf.float32
         )
+        self.global_step_ph = tf.placeholder(
+            name='global_step_ph',
+            shape=[],
+            dtype=tf.int32
+        )
 
+        self.set_global_step_op = tf.assign(self.global_step_tensor,
+                                            self.global_step_ph,
+                                            name='step_global_step')
+        self.increase_global_step_op = tf.assign(self.global_step_tensor,
+                                                 self.global_step_tensor + 1,
+                                                 name='increase_global_step')
         # Create model
         if len(state_shape) == 3:
             # Convert to float on GPU
@@ -95,7 +103,11 @@ class DQN:
             return output
 
     def increase_global_step(self, sess):
+        # Increasing the global step every timestep was consuming too much time
         sess.run(self.increase_global_step_op)
+
+    def set_global_step(self, sess, step):
+        sess.run(self.set_global_step_op, feed_dict={self.global_step_ph: step})
 
     def _build_optimization(self, learning_rate, clip_norm, gamma,
                             lr_decay_steps, lr_decay_rate, min_learning_rate):
@@ -125,7 +137,7 @@ class DQN:
         grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
         clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
                          for grad, var in grads_and_vars if grad is not None]
-        training_op = opt.apply_gradients(clipped_grads, global_step=self.global_step_tensor)
+        training_op = opt.apply_gradients(clipped_grads)
 
         return training_op
 

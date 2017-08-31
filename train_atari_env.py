@@ -119,6 +119,7 @@ with sv.managed_session() as sess:
 
         # Display logs
         if i_step % LOG_STEPS == 0:
+            model.set_global_step(sess, i_step)
             ep_rewards = env_monitor_wrapped.get_episode_rewards()
             num_episodes_old = num_episodes
             num_episodes = len(ep_rewards)
