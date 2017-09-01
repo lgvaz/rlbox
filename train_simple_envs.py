@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 from utils import *
 from model import DQN
-from evaluation import evaluate
 
 
 # Constants
@@ -20,7 +19,7 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e4)
 MIN_REPLAYS = int(1e4)
-LOG_DIR = 'logs/cart_pole/v8'
+LOG_DIR = 'logs/cart_pole/v11'
 VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 LR_DECAY_RATE = 0.05
 LR_DECAY_STEPS = 3e5

@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 from collections import deque
@@ -80,6 +81,25 @@ class ImgReplayBuffer:
             end_idxs.append(end_idx)
 
         return np.array(start_idxs), np.array(end_idxs)
+
+
+def create_q_values_op(sess, log_dir, model_name):
+    # Import model from metagraph
+    model_path = os.path.join(log_dir, model_name)
+    saver = tf.train.import_meta_graph(model_path + '.meta')
+    saver.restore(sess, tf.train.latest_checkpoint(log_dir))
+
+    # Fetch tensors
+    q_values_tensor = tf.get_collection('q_values')[0]
+    state_input_ph = tf.get_collection('state_input')[0]
+
+    def compute_q_values(state):
+        q_values = sess.run(q_values_tensor,
+                            feed_dict={state_input_ph: state})
+        return q_values
+
+    return compute_q_values
+
 
 def huber_loss(y_true, y_pred, delta=1.):
     '''

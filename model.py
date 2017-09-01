@@ -74,8 +74,11 @@ class DQN:
 
         # Create training operation
         self.training_op = self._build_optimization(clip_norm, gamma)
-
         self.update_target_op = self._build_target_update_op()
+
+        # Create collections for loading later
+        tf.add_to_collection('state_input', self.states_t)
+        tf.add_to_collection('q_values', self.q_values)
 
     def _build_deepmind_model(self, states, scope):
         ''' Network model from DeepMind '''
