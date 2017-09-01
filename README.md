@@ -6,6 +6,6 @@
 <img src="assets/cart_pole.gif" width="280" height="200" />
 <img src="assets/acrobot.gif" width="280" height="200" />
 <img src="assets/lunar_lander.gif" width="280" height="200" />  
-**Reward x TimeStep on Breakout**  
+**Standard DQN run on Breakout**  
 ![Breakout reward](assets/breakout_plots.png)  
 
