@@ -19,13 +19,14 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e4)
 MIN_REPLAYS = int(1e4)
-LOG_DIR = 'logs/cart_pole/v11'
+LOG_DIR = 'logs/cart_pole/v16'
 VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 LR_DECAY_RATE = 0.05
 LR_DECAY_STEPS = 3e5
 LEARNING_FREQ = 4
 CLIP_NORM = 10
 RECORD = False
+DOUBLE = True
 
 # Constants
 # ENV_NAME = 'MountainCar-v0'
@@ -128,7 +129,7 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, CLIP_NORM, GAMMA)
+model = DQN(state_shape, num_actions, CLIP_NORM, GAMMA, double=DOUBLE)
 
 # Record videos
 env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,

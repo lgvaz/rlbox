@@ -5,9 +5,10 @@ from utils import huber_loss
 
 # TODO: Choice of loss (Huber or MSE)
 class DQN:
-    def __init__(self, state_shape, num_actions, clip_norm, gamma=0.99):
+    def __init__(self, state_shape, num_actions, clip_norm, gamma=0.99, double=False):
         self.state_shape = state_shape
         self.num_actions = num_actions
+        self.double = double
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
 
         if len(state_shape) == 3:
@@ -67,10 +68,14 @@ class DQN:
             states_tp1_float = tf.cast(self.states_tp1, tf.float32) / 255.
             self.q_values = self._build_deepmind_model(states_t_float, 'online')
             self.q_target = self._build_deepmind_model(states_tp1_float, 'target')
+            if double:
+                self.q_values_tp1 = self._build_deepmind_model(states_tp1_float, 'online', reuse=True)
 
         elif len(state_shape) == 1:
             self.q_values = self._build_dense_model(self.states_t, 'online')
             self.q_target = self._build_dense_model(self.states_tp1, 'target')
+            if double:
+                self.q_values_tp1 = self._build_dense_model(self.states_tp1, 'online', reuse=True)
 
         # Create training operation
         self.training_op = self._build_optimization(clip_norm, gamma)
@@ -80,9 +85,9 @@ class DQN:
         tf.add_to_collection('state_input', self.states_t)
         tf.add_to_collection('q_values', self.q_values)
 
-    def _build_deepmind_model(self, states, scope):
+    def _build_deepmind_model(self, states, scope, reuse=None):
         ''' Network model from DeepMind '''
-        with tf.variable_scope(scope):
+        with tf.variable_scope(scope, reuse=reuse):
             # Model architecture
             net = states
             # Convolutional layers
@@ -97,9 +102,9 @@ class DQN:
 
             return output
 
-    def _build_dense_model(self, states, scope):
+    def _build_dense_model(self, states, scope, reuse=None):
         ''' Simple fully connected model '''
-        with tf.variable_scope(scope):
+        with tf.variable_scope(scope, reuse=reuse):
             # Model architecture
             net = states
             net = tf.layers.dense(net, 512, activation=tf.nn.relu)
@@ -113,7 +118,11 @@ class DQN:
         q_t = tf.reduce_sum(tf.multiply(self.q_values, onehot_actions), axis=1)
 
         # Caculate td_target
-        q_tp1 = tf.reduce_max(self.q_target, axis=1)
+        if self.double:
+            best_actions_onehot = tf.one_hot(tf.argmax(self.q_values_tp1, axis=1), self.num_actions)
+            q_tp1 = tf.reduce_sum(tf.multiply(self.q_target, best_actions_onehot), axis=1)
+        else:
+            q_tp1 = tf.reduce_max(self.q_target, axis=1)
         td_target = self.rewards + (1 - self.done_mask) * gamma * q_tp1
         # errors = tf.squared_difference(q_t, td_target)
         errors = huber_loss(q_t, td_target)
