@@ -107,13 +107,6 @@ class DQN:
 
             return output
 
-    def increase_global_step(self, sess):
-        # Increasing the global step every timestep was consuming too much time
-        sess.run(self.increase_global_step_op)
-
-    def set_global_step(self, sess, step):
-        sess.run(self.set_global_step_op, feed_dict={self.global_step_ph: step})
-
     def _build_optimization(self, clip_norm, gamma):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions, self.num_actions)
@@ -147,6 +140,26 @@ class DQN:
 
         return op_holder
 
+    def predict(self, sess, states):
+        return sess.run(self.q_values, feed_dict={self.states_t: states})
+
+    def target_predict(self, sess, states):
+        return sess.run(self.q_target, feed_dict={self.states_tp1: states})
+
+    def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
+        feed_dict = {
+            self.learning_rate_ph: learning_rate,
+            self.states_t: states_t,
+            self.states_tp1: states_tp1,
+            self.actions: actions,
+            self.rewards: rewards,
+            self.done_mask: dones
+        }
+        sess.run(self.training_op, feed_dict=feed_dict)
+
+    def update_target_net(self, sess):
+        sess.run(self.update_target_op)
+
     # TODO: Maybe integrate summary writing in self.train
     def create_summaries(self):
         tf.summary.scalar('loss', self.total_error)
@@ -174,25 +187,12 @@ class DQN:
         ])
         sv.summary_computed(sess, summary)
 
-    def predict(self, sess, states):
-        return sess.run(self.q_values, feed_dict={self.states_t: states})
+    def increase_global_step(self, sess):
+        # Increasing the global step every timestep was consuming too much time
+        sess.run(self.increase_global_step_op)
 
-    def target_predict(self, sess, states):
-        return sess.run(self.q_target, feed_dict={self.states_tp1: states})
-
-    def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
-        feed_dict = {
-            self.learning_rate_ph: learning_rate,
-            self.states_t: states_t,
-            self.states_tp1: states_tp1,
-            self.actions: actions,
-            self.rewards: rewards,
-            self.done_mask: dones
-        }
-        sess.run(self.training_op, feed_dict=feed_dict)
-
-    def update_target_net(self, sess):
-        sess.run(self.update_target_op)
+    def set_global_step(self, sess, step):
+        sess.run(self.set_global_step_op, feed_dict={self.global_step_ph: step})
 
     def initialize(self, sess):
         sess.run(tf.global_variables_initializer())
