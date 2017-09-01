@@ -20,8 +20,8 @@ STOP_EXPLORATION = int(1e5)
 LOG_STEPS = int(5e3)
 MAX_REPLAYS = int(5e4)
 MIN_REPLAYS = int(1e4)
-LOG_DIR = 'logs/cart_pole/v0'
-VIDEO_DIR = LOG_DIR + '/videos/train'
+LOG_DIR = 'logs/cart_pole/v8'
+VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 LR_DECAY_RATE = 0.05
 LR_DECAY_STEPS = 3e5
 LEARNING_FREQ = 4
@@ -62,7 +62,7 @@ RECORD = False
 # MAX_REPLAYS = int(1e4)
 # MIN_REPLAYS = int(1e3)
 # LOG_DIR = 'logs/lunar_lander/v11_0'
-# VIDEO_DIR = LOG_DIR + '/videos/train'
+# VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 # LR_DECAY_RATE = 0.05
 # LR_DECAY_STEPS = 3e5
 # LEARNING_FREQ = 4
@@ -83,7 +83,7 @@ RECORD = False
 # MAX_REPLAYS = int(1e4)
 # MIN_REPLAYS = int(1e3)
 # LOG_DIR = 'logs/acrobot/v2'
-# VIDEO_DIR = LOG_DIR + '/videos/train'
+# VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 # LR_DECAY_RATE = 0.05
 # LR_DECAY_STEPS = 3e5
 # LEARNING_FREQ = 4
@@ -141,7 +141,7 @@ state = env.reset()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 get_epsilon = piecewise_linear([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [0.1, 0.01, 0.01])
-get_lr = piecewise_linear([], [1], LEARNING_RATE)
+get_lr = piecewise_linear([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [1, .1, .1], LEARNING_RATE)
 # Create logs variables
 summary_op = model.create_summaries()
 num_episodes = 0
@@ -206,3 +206,10 @@ with sv.managed_session() as sess:
             print('[Learning rate: {}]'.format(learning_rate))
             print('[Life reward: {:.2f}]'.format(mean_reward), end='')
             print('[Episode reward: {:.2f}]'.format(mean_ep_rewards), end='\n\n')
+
+    # Save final model
+    final_model_path = os.path.join(LOG_DIR, 'final_model')
+    sv.saver.save(sess, final_model_path)
+    print('------------------------')
+    print('Final model saved in: {}'.format(final_model_path))
+    print('------------------------')
