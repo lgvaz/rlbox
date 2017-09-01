@@ -135,3 +135,10 @@ with sv.managed_session() as sess:
             print('[Learning rate: {}]'.format(learning_rate))
             print('[Life reward: {:.2f}]'.format(mean_reward), end='')
             print('[Episode reward: {:.2f}]'.format(mean_ep_rewards), end='\n\n')
+
+    # Save final model
+    final_model_path = os.path.join(LOG_DIR, 'final_model')
+    sv.saver.save(sess, final_model_path)
+    print('------------------------')
+    print('Final model saved in: {}'.format(final_model_path))
+    print('------------------------')
