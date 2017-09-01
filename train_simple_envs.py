@@ -7,25 +7,28 @@ from model import DQN
 from evaluation import evaluate
 
 
-# # Constants
-# ENV_NAME = 'CartPole-v0'
-# LEARNING_RATE = 1e-3
-# USE_HUBER = True
-# NUM_STEPS = int(6e5)
-# BATCH_SIZE = 64
-# GAMMA = .99
-# UPDATE_TARGET_STEPS = int(200)
-# FINAL_EPSILON = 0.1
-# STOP_EXPLORATION = int(1e5)
-# LOG_STEPS = int(5e3)
-# MAX_REPLAYS = int(1e5)
-# MIN_REPLAYS = int(1e4)
-# LOG_DIR = 'logs/cart_pole/v2'
-# VIDEO_DIR = LOG_DIR + '/videos/train'
-# LR_DECAY_RATE = 0.05
-# LR_DECAY_STEPS = 3e5
+# Constants
+ENV_NAME = 'CartPole-v0'
+LEARNING_RATE = 1e-3
+USE_HUBER = True
+NUM_STEPS = int(2e5)
+BATCH_SIZE = 64
+GAMMA = .99
+UPDATE_TARGET_STEPS = int(200)
+FINAL_EPSILON = 0.1
+STOP_EXPLORATION = int(1e5)
+LOG_STEPS = int(5e3)
+MAX_REPLAYS = int(5e4)
+MIN_REPLAYS = int(1e4)
+LOG_DIR = 'logs/cart_pole/v0'
+VIDEO_DIR = LOG_DIR + '/videos/train'
+LR_DECAY_RATE = 0.05
+LR_DECAY_STEPS = 3e5
+LEARNING_FREQ = 4
+CLIP_NORM = 10
+RECORD = False
 
-# # Constants
+# Constants
 # ENV_NAME = 'MountainCar-v0'
 # LEARNING_RATE = 1e-3
 # USE_HUBER = True
@@ -40,6 +43,9 @@ from evaluation import evaluate
 # MIN_REPLAYS = int(1e4)
 # LOG_DIR = 'logs/mountain_car/v1'
 # VIDEO_DIR = LOG_DIR + '/videos'
+# LEARNING_FREQ = 4
+# CLIP_NORM = 10
+# RECORD = False
 
 
 # # Constants
@@ -59,24 +65,30 @@ from evaluation import evaluate
 # VIDEO_DIR = LOG_DIR + '/videos/train'
 # LR_DECAY_RATE = 0.05
 # LR_DECAY_STEPS = 3e5
+# LEARNING_FREQ = 4
+# CLIP_NORM = 10
+# RECORD = False
 
-# Constants
-ENV_NAME = 'Acrobot-v1'
-LEARNING_RATE = 1e-3
-USE_HUBER = True
-NUM_STEPS = int(6e5)
-BATCH_SIZE = 64
-GAMMA = .99
-UPDATE_TARGET_STEPS = int(400)
-FINAL_EPSILON = 0.1
-STOP_EXPLORATION = int(1e4)
-LOG_STEPS = int(5e3)
-MAX_REPLAYS = int(1e4)
-MIN_REPLAYS = int(1e3)
-LOG_DIR = 'logs/acrobot/v2'
-VIDEO_DIR = LOG_DIR + '/videos/train'
-LR_DECAY_RATE = 0.05
-LR_DECAY_STEPS = 3e5
+# # Constants
+# ENV_NAME = 'Acrobot-v1'
+# LEARNING_RATE = 1e-3
+# USE_HUBER = True
+# NUM_STEPS = int(6e5)
+# BATCH_SIZE = 64
+# GAMMA = .99
+# UPDATE_TARGET_STEPS = int(400)
+# FINAL_EPSILON = 0.1
+# STOP_EXPLORATION = int(1e4)
+# LOG_STEPS = int(5e3)
+# MAX_REPLAYS = int(1e4)
+# MIN_REPLAYS = int(1e3)
+# LOG_DIR = 'logs/acrobot/v2'
+# VIDEO_DIR = LOG_DIR + '/videos/train'
+# LR_DECAY_RATE = 0.05
+# LR_DECAY_STEPS = 3e5
+# LEARNING_FREQ = 4
+# CLIP_NORM = 10
+# RECORD = False
 
 # Create log directory
 if not os.path.exists(LOG_DIR):
@@ -97,7 +109,8 @@ with open(LOG_DIR + '/parameters.txt', 'w') as f:
 env = gym.make(ENV_NAME)
 # Create separete env for running evaluations
 # env_eval = gym.make(ENV_NAME)
-# env._max_episode_steps = 5000
+if 'CartPole' in ENV_NAME:
+    env._max_episode_steps = 5000
 
 buffer = SimpleReplayBuffer(maxlen=MAX_REPLAYS)
 # Populate replay memory
@@ -116,17 +129,22 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, LEARNING_RATE,
-            lr_decay_steps=LR_DECAY_STEPS, lr_decay_rate=LR_DECAY_RATE, gamma=GAMMA)
+model = DQN(state_shape, num_actions, CLIP_NORM, GAMMA)
 
 # Record videos
-env = gym.wrappers.Monitor(env, VIDEO_DIR,
-                           video_callable=lambda count: count % 100 == 0)
+env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,
+                                           video_callable=lambda x: x % 1000 == 0 and RECORD)
+# New wrappers would be added now
+env = env_monitor_wrapped
+
 state = env.reset()
-get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+# get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
 # get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = piecewise_linear([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [0.1, 0.01, 0.01])
+get_lr = piecewise_linear([], [1], LEARNING_RATE)
 # Create logs variables
 summary_op = model.create_summaries()
+num_episodes = 0
 reward_sum = 0
 rewards = []
 
@@ -136,9 +154,12 @@ with sv.managed_session() as sess:
     global_step = tf.train.global_step(sess, model.global_step_tensor)
     for i_step in range(global_step, NUM_STEPS + 1):
         # Choose an action
-        Q_values = model.predict(sess, state[np.newaxis])
         epsilon = get_epsilon(i_step)
-        action = egreedy_police(Q_values, epsilon)
+        if np.random.random() <= epsilon:
+            action = env.action_space.sample()
+        else:
+            Q_values = model.predict(sess, state[np.newaxis])
+            action = np.argmax(Q_values)
 
         # Execute action
         next_state, reward, done, _ = env.step(action)
@@ -155,24 +176,33 @@ with sv.managed_session() as sess:
             reward_sum = 0
 
         # Train
-        b_s, b_a, b_r, b_d, b_s_ = buffer.sample(BATCH_SIZE)
-        model.train(sess, b_s, b_s_, b_a, b_r, b_d)
+        if i_step % LEARNING_FREQ == 0:
+            learning_rate = get_lr(i_step)
+            b_s, b_a, b_r, b_d, b_s_ = buffer.sample(BATCH_SIZE)
+            model.train(sess, learning_rate, b_s, b_s_, b_a, b_r, b_d)
 
         # Update weights of target model
         if i_step % UPDATE_TARGET_STEPS == 0:
-            print('Updating target model...')
             model.update_target_net(sess)
 
         # Display logs
         if i_step % LOG_STEPS == 0:
-            # eval_reward = np.mean([evaluate(env_eval, sess, model) for _ in range(5)])
+            model.set_global_step(sess, i_step)
+            ep_rewards = env_monitor_wrapped.get_episode_rewards()
+            num_episodes_old = num_episodes
+            num_episodes = len(ep_rewards)
+            num_new_episodes = num_episodes - num_episodes_old
+            mean_ep_rewards = np.mean(ep_rewards[-num_new_episodes:])
             mean_reward = np.mean(rewards)
             rewards = []
             summary_op(sess, sv, b_s, b_s_, b_a, b_r, b_d)
-            model.summary_scalar(sess, sv, 'reward_train', mean_reward)
-            # model.summary_scalar(sess, sv, 'reward_eval', eval_reward)
             model.summary_scalar(sess, sv, 'epsilon', epsilon)
+            model.summary_scalar(sess, sv, 'learning_rate', learning_rate)
+            model.summary_scalar(sess, sv, 'reward_by_life(clipped)', mean_reward)
+            model.summary_scalar(sess, sv, 'reward_by_episode(unclipped)', mean_ep_rewards)
             print('[Step: {}]'.format(i_step), end='')
-            print('[Train reward: {:.2f}]'.format(mean_reward), end='')
-            # print('[Eval reward: {:.2f}]'.format(eval_reward), end='')
-            print('[Epsilon: {:.2f}]'.format(epsilon))
+            print('[Episode: {}]'.format(num_episodes), end='')
+            print('[Epsilon: {:.2f}]'.format(epsilon), end='')
+            print('[Learning rate: {}]'.format(learning_rate))
+            print('[Life reward: {:.2f}]'.format(mean_reward), end='')
+            print('[Episode reward: {:.2f}]'.format(mean_ep_rewards), end='\n\n')
