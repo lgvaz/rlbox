@@ -33,6 +33,7 @@ def evaluate(env, sess, q_func, render=False):
             state = env.reset()
             return reward_sum
 
+# TODO: Find another way to find if need to atari_wrap
 def setup(env_name, log_dir, model_name='final_model', atari_wrap=True, render=True, record=False):
     # Create enviroment
     env = gym.make(env_name)

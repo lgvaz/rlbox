@@ -6,27 +6,27 @@ from utils import *
 from model import DQN
 
 
-# Constants
-ENV_NAME = 'CartPole-v0'
-LEARNING_RATE = 1e-3
-USE_HUBER = True
-NUM_STEPS = int(2e5)
-BATCH_SIZE = 64
-GAMMA = .99
-UPDATE_TARGET_STEPS = int(200)
-FINAL_EPSILON = 0.1
-STOP_EXPLORATION = int(1e5)
-LOG_STEPS = int(5e3)
-MAX_REPLAYS = int(5e4)
-MIN_REPLAYS = int(1e4)
-LOG_DIR = 'logs/cart_pole/v16'
-VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
-LR_DECAY_RATE = 0.05
-LR_DECAY_STEPS = 3e5
-LEARNING_FREQ = 4
-CLIP_NORM = 10
-RECORD = False
-DOUBLE = True
+# # Constants
+# ENV_NAME = 'CartPole-v0'
+# LEARNING_RATE = 1e-3
+# USE_HUBER = True
+# NUM_STEPS = int(2e5)
+# BATCH_SIZE = 64
+# GAMMA = .99
+# UPDATE_TARGET_STEPS = int(200)
+# FINAL_EPSILON = 0.1
+# STOP_EXPLORATION = int(1e5)
+# LOG_STEPS = int(5e3)
+# MAX_REPLAYS = int(5e4)
+# MIN_REPLAYS = int(1e4)
+# LOG_DIR = 'logs/cart_pole/v17'
+# VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
+# LR_DECAY_RATE = 0.05
+# LR_DECAY_STEPS = 3e5
+# LEARNING_FREQ = 4
+# CLIP_NORM = 10
+# RECORD = False
+# DOUBLE = True
 
 # Constants
 # ENV_NAME = 'MountainCar-v0'
@@ -48,26 +48,27 @@ DOUBLE = True
 # RECORD = False
 
 
-# # Constants
-# ENV_NAME = 'LunarLander-v2'
-# LEARNING_RATE = 1e-3
-# USE_HUBER = True
-# NUM_STEPS = int(6e5)
-# BATCH_SIZE = 64
-# GAMMA = .99
-# UPDATE_TARGET_STEPS = int(400)
-# FINAL_EPSILON = 0.1
-# STOP_EXPLORATION = int(1e4)
-# LOG_STEPS = int(5e3)
-# MAX_REPLAYS = int(1e4)
-# MIN_REPLAYS = int(1e3)
-# LOG_DIR = 'logs/lunar_lander/v11_0'
-# VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
-# LR_DECAY_RATE = 0.05
-# LR_DECAY_STEPS = 3e5
-# LEARNING_FREQ = 4
-# CLIP_NORM = 10
-# RECORD = False
+# Constants
+ENV_NAME = 'LunarLander-v2'
+LEARNING_RATE = 1e-3
+USE_HUBER = True
+NUM_STEPS = int(6e5)
+BATCH_SIZE = 64
+GAMMA = .99
+UPDATE_TARGET_STEPS = int(400)
+FINAL_EPSILON = 0.1
+STOP_EXPLORATION = int(1e4)
+LOG_STEPS = int(5e3)
+MAX_REPLAYS = int(1e4)
+MIN_REPLAYS = int(1e3)
+LOG_DIR = 'logs/lunar_lander/double_v0'
+VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
+LR_DECAY_RATE = 0.05
+LR_DECAY_STEPS = 3e5
+LEARNING_FREQ = 4
+CLIP_NORM = 10
+RECORD = False
+DOUBLE = True
 
 # # Constants
 # ENV_NAME = 'Acrobot-v1'
