@@ -47,9 +47,9 @@ class ImgReplayBuffer:
 
         # TODO: Only splice self.states once to get state and next_state
         states = np.array([self.states[start_idx:end_idx] for
-                             start_idx, end_idx in zip(start_idxs, end_idxs)])
+                           start_idx, end_idx in zip(start_idxs, end_idxs)], copy=False)
         states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
-                                  start_idx, end_idx in zip(start_idxs, end_idxs)])
+                                start_idx, end_idx in zip(start_idxs, end_idxs)], copy=False)
         # Remember that when spilicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
         rewards = self.rewards[end_idxs - 1]
