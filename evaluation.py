@@ -34,7 +34,7 @@ def evaluate(env, sess, q_func, render=False):
             return reward_sum
 
 # TODO: Find another way to find if need to atari_wrap
-def setup(env_name, log_dir, model_name='final_model', atari_wrap=True, render=True, record=False):
+def setup(env_name, log_dir, num_episodes=10, atari_wrap=True, render=True, record=False):
     # Create enviroment
     env = gym.make(env_name)
     # Create videos directory
@@ -53,10 +53,17 @@ def setup(env_name, log_dir, model_name='final_model', atari_wrap=True, render=T
 
 
     with tf.Session() as sess:
-        get_q_values = create_q_values_op(sess, log_dir, model_name)
-        while True:
+        get_q_values = create_q_values_op(sess, log_dir)
+        while len(env_monitor_wrap.get_episode_rewards()) < num_episodes:
             reward = evaluate(env, sess, get_q_values, render=render)
-            print('Life reward: {}'.format(reward))
+            print('Life reward(clipped): {}'.format(reward))
+        ep_rewards = env_monitor_wrap.get_episode_rewards()
+        print('Episodes rewards: {}'.format(ep_rewards))
+        print('---------------------')
+        print('Rewards mean: {}'.format(np.mean(ep_rewards)))
+        print('Maximum reward: {}'.format(np.max(ep_rewards)))
+        print('Minimum reward: {}'.format(np.min(ep_rewards)))
+        print('---------------------')
 
 
 # Maybe fetch q_values after sv has loaded graph

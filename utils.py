@@ -83,11 +83,12 @@ class ImgReplayBuffer:
         return np.array(start_idxs), np.array(end_idxs)
 
 
-def create_q_values_op(sess, log_dir, model_name):
+def create_q_values_op(sess, log_dir):
+    ''' Returns a function that computes the q_values '''
     # Import model from metagraph
-    model_path = os.path.join(log_dir, model_name)
+    model_path = tf.train.latest_checkpoint(log_dir)
     saver = tf.train.import_meta_graph(model_path + '.meta')
-    saver.restore(sess, tf.train.latest_checkpoint(log_dir))
+    saver.restore(sess, model_path)
 
     # Fetch tensors
     q_values_tensor = tf.get_collection('q_values')[0]
