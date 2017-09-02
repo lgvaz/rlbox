@@ -7,5 +7,6 @@
 <img src="assets/acrobot.gif" width="280" height="200" />
 <img src="assets/lunar_lander.gif" width="280" height="200" />  
 **Standard DQN run on Breakout**  
+Mean reward after training: 421 (100 episodes)  
 ![Breakout reward](assets/breakout_plots.png)  
 
