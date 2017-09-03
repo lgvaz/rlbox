@@ -9,64 +9,7 @@ from atari_wrapper import wrap_deepmind
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib import style
-style.use('ggplot')
-
-# TODO: Register the Q values as the agent plays, then plot them. (Also store the states)
-
-def evaluate(env, sess, q_func, render=False):
-    state = env.reset()
-    reward_sum = 0
-    ep_q_values = []
-    while True:
-        if render:
-            env.render()
-        # Choose best action
-        # Adding random action here just so deterministic envs don't rollout all the same
-        if np.random.random() <= 0.01:
-            action = env.action_space.sample()
-        else:
-            Q_values = q_func(state[np.newaxis])
-            ep_q_values.append(np.max(Q_values))
-            action = np.argmax(Q_values)
-
-        # Execute action
-        next_state, reward, done, _ = env.step(action)
-        reward_sum += reward
-
-        # Update state
-        state = next_state
-        if done:
-            plt.plot(ep_q_values)
-            plt.show()
-            state = env.reset()
-            return reward_sum
-
-def animate_op(env, sess, q_func, render=False):
-    state = env.reset()
-    ep_q_values = []
-
-    def run_one_step():
-        if np.random.random() <= 0.01:
-            action = env.action_space.sample()
-        else:
-            Q_values = q_func(state[np.newaxis])
-            ep_q_values.append(np.max(Q_values))
-            action = np.argmax(Q_values)
-
-        # Execute action
-        next_state, reward, done, _ = env.step(action)
-        reward_sum += reward
-
-        # Update state
-        if done:
-            state = env.reset()
-        else:
-            state = next_state
-
-        return ep_q_values
-
-    return run_one_step
+plt.style.use('ggplot')
 
 class Agent():
     def __init__(self, env, sess, q_func, render=True, live_plot=True):
@@ -75,14 +18,7 @@ class Agent():
         self.q_func = q_func
         self.render = render
         self.live_plot = live_plot
-
-        self.state = env.reset()
-        self.past_q_values = []
-        self.rewards = []
-
-        if live_plot:
-            fig, animate = create_animate_func(self._play_one_life)
-            self.anim = animation.FuncAnimation(fig, animate, interval=1)
+        self.action_meanings = env.unwrapped.get_action_meanings()
 
     def _play_one_step(self):
         if self.render:
@@ -105,15 +41,10 @@ class Agent():
 
         return Q_values, reward, done
 
-    def play_one_step(self):
-        Q_values, reward, done = self._play_one_step()
-        self.past_q_values.append(np.max(Q_values))
-
-        return self.past_q_values
-
     def _play_one_life(self):
         Q_values, reward, done = self._play_one_step()
-        self.past_q_values.append(np.max(Q_values))
+        # The value of the state in just max Q
+        self.state_values.append(np.max(Q_values))
         self.rewards.append(reward)
 
         # If done, stop animation
@@ -121,15 +52,22 @@ class Agent():
             self.anim.event_source.stop()
             plt.close()
 
-        return self.past_q_values
+        return self.state_values, np.squeeze(Q_values), self.action_meanings
 
     def play_one_life(self):
-        # Live plotting (until end of life)
+        self.state = env.reset()
+        self.state_values = []
+        self.rewards = []
+        # Live plotting setup
+        fig, animate = create_animate_func(self._play_one_life)
+        self.anim = animation.FuncAnimation(fig, animate, interval=1)
+        # Program will stay here until plt.close() is called
         plt.show()
         # Plot over all lifetime
         discounted_rewards = discounted_sum_rewards(self.rewards)
-        plt.plot(self.past_q_values, label='Estimated return')
+        plt.plot(self.state_values, label='Estimated return')
         plt.plot(discounted_rewards, label='Real return')
+        plt.legend()
         plt.show()
 
 
@@ -141,15 +79,29 @@ def create_animate_func(func, window=100):
         func: function to animate
         window: maximum points shown in plot
     '''
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(2, 1)
 
     def animate(i):
-        y = func()[::-1][:window]
+        state_values, q_values, action_meanings = func()
 
         # Redraw
-        ax.clear()
-        ax.set_title('Value function')
-        ax.plot(y)
+        # TODO: Also plot real return live?
+        # Plot value function
+        ax[0].clear()
+        ax[0].plot(state_values[::-1][:window])
+        ax[0].set_title('Value function')
+        ax[0].set_xlim(0, window)
+        ax[0].set_xticks([])
+        ax[0].xaxis.grid(False)
+        # Plot value of actions
+        ind = np.arange(len(q_values))
+        width = 0.4
+        ax[1].clear()
+        ax[1].bar(ind + width / 2, q_values, width)
+        ax[1].set_title('Action Values')
+        ax[1].set_xticks(ind + width / 2)
+        ax[1].set_xticklabels(action_meanings)
+        ax[1].xaxis.grid(False)
 
     return fig, animate
 
