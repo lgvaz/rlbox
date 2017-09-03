@@ -172,3 +172,14 @@ def egreedy_police(Q_values, epsilon):
         return np.random.choice(np.arange(num_actions))
     else:
         return np.argmax(np.squeeze(Q_values))
+
+
+def discounted_sum_rewards(rewards, gamma=0.99):
+    reward_sum = 0
+    discounted_rewards = []
+
+    for reward in reversed(rewards):
+        reward_sum = reward + gamma * reward_sum
+        discounted_rewards.append(reward_sum)
+
+    return discounted_rewards[::-1]
