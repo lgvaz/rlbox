@@ -7,6 +7,7 @@ from model import DQN
 from atari_wrapper import wrap_deepmind
 
 
+# TODO: Try update target 30000 (Suggest by Double DQN paper)
 # Constants
 ENV_NAME = 'BreakoutNoFrameskip-v4'
 LEARNING_RATE = 1e-4
@@ -20,26 +21,18 @@ STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
 MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/v5'
+LOG_DIR = 'logs/breakout/double_v0'
 VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
 CLIP_NORM = 10
+DOUBLE = True
 
 # Create log directory
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 if not os.path.exists(VIDEO_DIR):
     os.makedirs(VIDEO_DIR)
-
-with open(LOG_DIR + '/parameters.txt', 'w') as f:
-    print('Learning rate: {}'.format(LEARNING_RATE), file=f)
-    print('Loss function: {}'.format(['MSE', 'Huber'][USE_HUBER]), file=f)
-    print('Target update steps: {}'.format(UPDATE_TARGET_STEPS), file=f)
-    print('Final epsilon: {}'.format(FINAL_EPSILON), file=f)
-    print('Stop exploration: {}'.format(STOP_EXPLORATION), file=f)
-    print('Memory size: {}'.format(MAX_REPLAYS), file=f)
-    print('Clip norm: {}'.format(CLIP_NORM), file=f)
 
 # Create new enviroment
 env = gym.make(ENV_NAME)
@@ -63,7 +56,7 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = list(env.observation_space.shape)
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, CLIP_NORM, gamma=GAMMA)
+model = DQN(state_shape, num_actions, CLIP_NORM, gamma=GAMMA, double=DOUBLE)
 
 # state = env.reset()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
