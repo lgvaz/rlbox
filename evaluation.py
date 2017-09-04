@@ -3,7 +3,6 @@ import gym
 import fire
 import numpy as np
 import tensorflow as tf
-from model import DQN
 from utils import create_q_values_op, discounted_sum_rewards
 from atari_wrapper import wrap_deepmind
 
@@ -102,7 +101,6 @@ def create_animate_func(func, action_meanings, window=100):
     def animate(i):
         state_values, q_values, _ = func()
 
-        # Redraw
         # TODO: Also plot real return live?
         # Plot value function
         ax[0].clear()
@@ -147,7 +145,7 @@ def setup(env_name, log_dir, num_lives=5, atari_wrap=True,
                       live_plot=live_plot, render=render)
 
         for i_life in range(num_lives):
-            print('\rLife {}/{}'.format(i_life + 1, num_lives))
+            print('\rLife {}/{}'.format(i_life + 1, num_lives), end='')
             agent.play_one_life()
 
     ep_rewards = env_monitor_wrap.get_episode_rewards()
