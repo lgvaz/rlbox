@@ -3,7 +3,7 @@ import gym
 import fire
 import numpy as np
 import tensorflow as tf
-from utils import create_q_values_op, discounted_sum_rewards
+from utils import load_q_func, discounted_sum_rewards
 from atari_wrapper import wrap_deepmind
 
 import matplotlib.pyplot as plt
@@ -140,7 +140,7 @@ def setup(env_name, log_dir, num_lives=5, atari_wrap=True,
         env = env_monitor_wrap
 
     with tf.Session() as sess:
-        q_func = create_q_values_op(sess, log_dir)
+        q_func = load_q_func(sess, log_dir)
         agent = Agent(env, sess, q_func, end_life_plot=end_life_plot,
                       live_plot=live_plot, render=render)
 
