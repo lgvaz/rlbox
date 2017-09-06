@@ -5,13 +5,24 @@ from graphs import deepmind_graph, simple_graph
 from base_model import BaseModel
 
 
-# TODO: Pass the graph used as an argument
 class DQNModel(BaseModel):
-    def __init__(self, state_shape, num_actions, graph,
+    def __init__(self, state_shape, num_actions, graph=None,
                  input_type=None, clip_norm=10, gamma=0.99, double=False):
-
         super(DQNModel, self).__init__(state_shape, num_actions, input_type)
         self.double = double
+
+        # If input is an image defaults to deepmind_graph, else simple_graph
+        if graph is None:
+            if len(state_shape) == 3:
+                graph = deepmind_graph
+                print('Using deepmind_graph')
+            else:
+                graph = simple_graph
+                print('Using simple_graph')
+        else:
+            print('Using custom graph')
+
+        # Create graphs
         self.q_online_t = graph(self.states_t, num_actions, 'online')
         self.q_target_tp1 = graph(self.states_tp1, num_actions, 'target')
         if double:

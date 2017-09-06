@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 from model import DQNModel
-from graphs import deepmind_graph, simple_graph
 
 
 # TODO: Change print statements to asserts
@@ -27,8 +26,7 @@ for i_action in range(NUM_ACTIONS):
     fake_actions = np.array(3 * [i_action])
 
     tf.reset_default_graph()
-    model = DQNModel(STATE_SHAPE, NUM_ACTIONS,
-                     graph=deepmind_graph, input_type=tf.uint8)
+    model = DQNModel(STATE_SHAPE, NUM_ACTIONS)
 
     print('Optimizing for action', i_action)
     with tf.Session() as sess:
@@ -49,8 +47,7 @@ for i_action in range(NUM_ACTIONS):
 
 print('Testing target update process')
 tf.reset_default_graph()
-model = DQNModel(STATE_SHAPE, NUM_ACTIONS,
-                 graph=deepmind_graph, input_type=tf.uint8)
+model = DQNModel(STATE_SHAPE, NUM_ACTIONS)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
