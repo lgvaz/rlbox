@@ -2,33 +2,15 @@ import numpy as np
 import tensorflow as tf
 from utils import piecewise_linear
 from model import DQNModel
+from base_agent import BaseAgent
 
-class DQNAgent:
+
+class DQNAgent(BaseAgent):
     def __init__(self, env, log_dir, graph=None, input_type=None, double=False):
-        self.env = env
-        self.state = env.reset()
-        self.log_dir = log_dir
-        self.sess = None
+        super(DQNAgent, self).__init__(env, log_dir)
         state_shape = (env.observation_space.shape)
         num_actions = env.action_space.n
-
         self.model = DQNModel(state_shape, num_actions, graph, double=double)
-
-    def _maybe_create_tf_sess(self):
-        if self.sess is None:
-            self.sess = tf.Session()
-            self.sess.run(tf.global_variables_initializer())
-
-    def _play_one_step(self, epsilon, render):
-        if render:
-            self.env.render()
-
-        action = self.select_action(self.state, epsilon)
-
-        # Execute action
-        next_state, reward, done, info = self.env.step(action)
-
-        return next_state, reward, done, info
 
     def select_action(self, state, epsilon):
         # Select action based on an egreedy policy
