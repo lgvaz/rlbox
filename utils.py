@@ -92,7 +92,7 @@ def load_q_func(sess, log_dir):
     saver.restore(sess, model_path)
 
     # Fetch tensors
-    q_values_tensor = tf.get_collection('q_values')[0]
+    q_values_tensor = tf.get_collection('q_online_t')[0]
     state_input_ph = tf.get_collection('state_input')[0]
 
     def compute_q_values(state):
