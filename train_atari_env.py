@@ -3,7 +3,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 from utils import *
-from model import DQN
+from model import DQNModel
 from atari_wrapper import wrap_deepmind
 
 
@@ -20,8 +20,8 @@ FINAL_EPSILON = 0.1
 STOP_EXPLORATION = int(1e6)
 LOG_STEPS = int(1e4)
 MAX_REPLAYS = int(1e6)
-MIN_REPLAYS = int(5e4)
-LOG_DIR = 'logs/breakout/double_v0'
+MIN_REPLAYS = int(5e2)
+LOG_DIR = 'logs/tests/breakout/v0'
 VIDEO_DIR = os.path.join(LOG_DIR, 'videos/train')
 HISTORY_LENGTH = 4
 LEARNING_FREQ = 4
@@ -40,7 +40,7 @@ env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,
                                         video_callable=lambda x: x % 500 == 0)
 env = wrap_deepmind(env_monitor_wrapped, frame_stack=HISTORY_LENGTH)
 
-buffer = ImgReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
+buffer = ReplayBuffer(MAX_REPLAYS, HISTORY_LENGTH)
 # Populate replay memory
 print('Populating replay buffer...')
 state = env.reset()
@@ -56,7 +56,8 @@ for _ in range(MIN_REPLAYS):
 # Create DQN model
 state_shape = list(env.observation_space.shape)
 num_actions = env.action_space.n
-model = DQN(state_shape, num_actions, CLIP_NORM, gamma=GAMMA, double=DOUBLE)
+model = DQNModel(state_shape, num_actions,
+                 clip_norm=CLIP_NORM, gamma=GAMMA, double=DOUBLE)
 
 # state = env.reset()
 # get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)

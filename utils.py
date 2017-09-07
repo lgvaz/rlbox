@@ -17,8 +17,8 @@ class SimpleReplayBuffer:
         return map(np.array, zip(*batch))
 
 
-class ImgReplayBuffer:
-    def __init__(self, maxlen, history_length):
+class ReplayBuffer:
+    def __init__(self, maxlen, history_length=1):
         self.initialized = False
         self.maxlen = maxlen
         self.history_length = history_length
@@ -28,7 +28,7 @@ class ImgReplayBuffer:
     def add(self, state, action, reward, done):
         if not self.initialized:
             self.initialized = True
-            self.states = np.empty([self.maxlen] + list(state.shape), dtype=np.uint8)
+            self.states = np.empty([self.maxlen] + list(state.shape), dtype=state.dtype)
             self.actions = np.empty([self.maxlen], dtype=np.int32)
             self.rewards = np.empty([self.maxlen], dtype=np.float32)
             self.dones = np.empty([self.maxlen], dtype=np.bool)
@@ -55,8 +55,9 @@ class ImgReplayBuffer:
         rewards = self.rewards[end_idxs - 1]
         dones = self.dones[end_idxs - 1]
 
-        return (states.transpose(0, 2, 3, 1),
-                states_next.transpose(0, 2, 3, 1),
+        # Squeezing may cause problems when processing 1 history_len images
+        return (np.squeeze(np.moveaxis(states, 1, -1)),
+                np.squeeze(np.moveaxis(states_next, 1, -1)),
                 actions,
                 rewards,
                 dones)
