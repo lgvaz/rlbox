@@ -25,16 +25,26 @@ class ReplayBuffer:
         self.current_idx = 0
         self.current_len = 0
 
+    # TODO: Better handling of input_shape
     def add(self, state, action, reward, done):
         if not self.initialized:
             self.initialized = True
-            self.states = np.empty([self.maxlen] + list(state.shape), dtype=state.dtype)
+            if self.history_length > 1:
+                self.states = np.empty([self.maxlen] + list(state.shape[:-1]),
+                                       dtype=state.dtype)
+            else:
+                self.states = np.empty([self.maxlen] + list(state.shape),
+                                       dtype=state.dtype)
             self.actions = np.empty([self.maxlen], dtype=np.int32)
             self.rewards = np.empty([self.maxlen], dtype=np.float32)
             self.dones = np.empty([self.maxlen], dtype=np.bool)
 
-        # Store state
-        self.states[self.current_idx] = state
+        # Store experience
+        if self.history_length > 1:
+            # Store only the last frame
+            self.states[self.current_idx] = state[..., -1]
+        else:
+            self.states[self.current_idx] = state
         self.actions[self.current_idx] = action
         self.rewards[self.current_idx] = reward
         self.dones[self.current_idx] = done
