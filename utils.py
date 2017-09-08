@@ -18,64 +18,64 @@ class SimpleReplayBuffer:
 
 
 class ReplayBuffer:
-    def __init__(self, maxlen, history_length=1):
+    def __init__(self, maxlen, history_length=1, batch_size=32):
         self.initialized = False
         self.maxlen = maxlen
         self.history_length = history_length
+        self.batch_size = batch_size
         self.current_idx = 0
         self.current_len = 0
+        self.states_hist = deque(maxlen=history_length)
+
+    def _reset_states_hist(self):
+        for _ in range(self.history_length):
+            self.states_hist.append(self.clear_state)
 
     # TODO: Better handling of input_shape
-    def add(self, state, action, reward, done):
+    def add_state(self, state):
         if not self.initialized:
             self.initialized = True
-            if self.history_length > 1:
-                self.states = np.empty([self.maxlen] + list(state.shape[:-1]),
-                                       dtype=state.dtype)
-            else:
-                self.states = np.empty([self.maxlen] + list(state.shape),
-                                       dtype=state.dtype)
+            # Allocate memory
+            self.states = np.empty(list(np.squeeze(state).shape) + [self.maxlen],
+                                   dtype=state.dtype)
             self.actions = np.empty([self.maxlen], dtype=np.int32)
             self.rewards = np.empty([self.maxlen], dtype=np.float32)
             self.dones = np.empty([self.maxlen], dtype=np.bool)
+            # Allocate memory for batch
+            self.b_states_t = np.empty([self.batch_size]
+                                       + list(np.squeeze(state).shape)
+                                       + [self.history_length], dtype=state.dtype)
+            self.b_states_tp1 = np.empty([self.batch_size]
+                                         + list(np.squeeze(state).shape)
+                                         + [self.history_length], dtype=state.dtype)
+            # Create state for reseting states history
+            self.clear_state = np.zeros(np.squeeze(state.shape))
+            self._reset_states_hist()
 
-        # Store experience
-        if self.history_length > 1:
-            # Store only the last frame
-            self.states[self.current_idx] = state[..., -1]
-        else:
-            self.states[self.current_idx] = state
+        # Store state
+        self.states[..., self.current_idx] = np.squeeze(state)
+        self.states_hist.append(state)
+
+    def add_effect(self, action, reward, done):
         self.actions[self.current_idx] = action
         self.rewards[self.current_idx] = reward
         self.dones[self.current_idx] = done
 
+        # If this step is terminal, reset states history
+        if done:
+            self._reset_states_hist()
+
+        # Update current position
         self.current_idx = (self.current_idx + 1) % self.maxlen
         self.current_len = min(self.current_len + 1, self.maxlen)
 
+    def last_state(self):
+        return np.array(self.states_hist, copy=False).swapaxes(0, -1)
+
     def sample(self, batch_size):
-        start_idxs, end_idxs = self._generate_idxs(batch_size)
-
-        # TODO: Only splice self.states once to get state and next_state
-        states = np.array([self.states[start_idx:end_idx] for
-                           start_idx, end_idx in zip(start_idxs, end_idxs)], copy=False)
-        states_next = np.array([self.states[start_idx + 1: end_idx + 1] for
-                                start_idx, end_idx in zip(start_idxs, end_idxs)], copy=False)
-        # Remember that when spilicing the end_idx is not included
-        actions = self.actions[end_idxs - 1]
-        rewards = self.rewards[end_idxs - 1]
-        dones = self.dones[end_idxs - 1]
-
-        # Squeezing may cause problems when processing 1 history_len images
-        return (np.squeeze(np.moveaxis(states, 1, -1)),
-                np.squeeze(np.moveaxis(states_next, 1, -1)),
-                actions,
-                rewards,
-                dones)
-
-    def _generate_idxs(self, batch_size):
         start_idxs = []
         end_idxs = []
-        while len(start_idxs) < batch_size:
+        while len(start_idxs) < self.batch_size:
             start_idx = np.random.randint(0, self.current_len - self.history_length)
             end_idx = start_idx + self.history_length
 
@@ -84,14 +84,21 @@ class ReplayBuffer:
                 continue
             # Only the last frame can have done == True
             # TODO: Check if done checking is correct
-            for i_idx in range(start_idx, end_idx - 1):
-                if self.dones[i_idx] is True:
-                    continue
+            if np.any(self.dones[start_idx: end_idx - 1]):
+                continue
 
+            self.b_states_t[len(start_idxs)] = self.states[..., start_idx:end_idx]
+            self.b_states_tp1[len(start_idxs)] = self.states[..., start_idx+1:end_idx+1]
             start_idxs.append(start_idx)
             end_idxs.append(end_idx)
 
-        return np.array(start_idxs), np.array(end_idxs)
+        # Remember that when spilicing the end_idx is not included
+        end_idxs = np.array(end_idxs)
+        actions = self.actions[end_idxs - 1]
+        rewards = self.rewards[end_idxs - 1]
+        dones = self.dones[end_idxs - 1]
+
+        return self.b_states_t, self.b_states_tp1, actions, rewards, dones
 
 
 def load_q_func(sess, log_dir):
