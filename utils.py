@@ -126,7 +126,7 @@ def huber_loss(y_true, y_pred, delta=1.):
     return tf.where(condition, squared_error, linear_error)
 
 
-def exponential_epsilon_decay(epsilon_final, stop_exploration):
+def exponential_decay(epsilon_final, stop_exploration):
     ''' Calculate epsilon based on an exponential interpolation '''
     epsilon_step = - np.log(epsilon_final) / stop_exploration
 
@@ -139,7 +139,7 @@ def exponential_epsilon_decay(epsilon_final, stop_exploration):
     return get_epsilon
 
 
-def linear_epsilon_decay(epsilon_final, stop_exploration, epsilon_start=1):
+def linear_decay(epsilon_final, stop_exploration, epsilon_start=1):
     ''' Calculates epsilon based on a linear interpolation '''
     epsilon_step = - (epsilon_start - epsilon_final) / stop_exploration
     epsilon_steps = []
@@ -153,7 +153,7 @@ def linear_epsilon_decay(epsilon_final, stop_exploration, epsilon_start=1):
     return get_epsilon
 
 
-def piecewise_linear(boundaries, values, initial_value=1):
+def piecewise_linear_decay(boundaries, values, initial_value=1):
     ''' Linear interpolates between boundaries '''
     boundaries = [0] + boundaries
     final_epsilons = [initial_value * value for value in values]

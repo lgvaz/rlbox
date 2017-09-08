@@ -60,10 +60,10 @@ model = DQNModel(state_shape, num_actions,
                  clip_norm=CLIP_NORM, gamma=GAMMA, double=DOUBLE)
 
 # state = env.reset()
-# get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
-# get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
-get_epsilon = piecewise_linear([1e6, 24e6], [0.1, 0.01, 0.01])
-get_lr = piecewise_linear([4e6, 20e6], [1, .5, .5], initial_value=LEARNING_RATE)
+# get_epsilon = exponential_decay(FINAL_EPSILON, STOP_EXPLORATION)
+# get_epsilon = linear_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = piecewise_linear_decay([1e6, 24e6], [0.1, 0.01, 0.01])
+get_lr = piecewise_linear_decay([4e6, 20e6], [1, .5, .5], initial_value=LEARNING_RATE)
 # Create logs variables
 summary_op = model.create_summaries()
 num_episodes = 0

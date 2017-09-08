@@ -139,10 +139,10 @@ env_monitor_wrapped = gym.wrappers.Monitor(env, VIDEO_DIR,
 env = env_monitor_wrapped
 
 state = env.reset()
-# get_epsilon = exponential_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
-# get_epsilon = linear_epsilon_decay(FINAL_EPSILON, STOP_EXPLORATION)
-get_epsilon = piecewise_linear([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [0.1, 0.01, 0.01])
-get_lr = piecewise_linear([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [1, .1, .1], LEARNING_RATE)
+# get_epsilon = exponential_decay(FINAL_EPSILON, STOP_EXPLORATION)
+# get_epsilon = linear_decay(FINAL_EPSILON, STOP_EXPLORATION)
+get_epsilon = piecewise_linear_decay([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [0.1, 0.01, 0.01])
+get_lr = piecewise_linear_decay([NUM_STEPS * 0.1, NUM_STEPS * 0.5], [1, .1, .1], LEARNING_RATE)
 # Create logs variables
 summary_op = model.create_summaries()
 num_episodes = 0
