@@ -169,6 +169,5 @@ def wrap_deepmind(env, frame_stack=4, frame_skip=4):
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = ProcessFrame84(env)
-    env = FrameStack(env, frame_stack)
     env = ClippedRewardsWrapper(env)
     return env

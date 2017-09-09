@@ -4,17 +4,23 @@ import numpy as np
 from collections import deque
 import tensorflow as tf
 
+class RingBuffer:
+    ''' Used instead of deque '''
+    def __init__(self, shape, maxlen):
+        self.shape = shape
+        self.maxlen = maxlen
+        self.current_idx = 0
+        self.reset()
 
-class SimpleReplayBuffer:
-    def __init__(self, maxlen):
-        self.memory = deque(maxlen=maxlen)
+    def reset(self):
+        self.data = np.zeros((self.shape + (self.maxlen,)))
 
-    def add(self, state, action, reward, done, next_state):
-        self.memory.append((state, action, reward, done, next_state))
+    def append(self, data):
+        self.data = np.roll(self.data, -1, axis=-1)
+        self.data[..., self.maxlen - 1] = np.squeeze(data)
 
-    def sample(self, batch_size=32):
-        batch = random.sample(self.memory, batch_size)
-        return map(np.array, zip(*batch))
+    def get_data(self):
+        return self.data
 
 
 class ReplayBuffer:
@@ -25,54 +31,36 @@ class ReplayBuffer:
         self.batch_size = batch_size
         self.current_idx = 0
         self.current_len = 0
-        self.states_hist = deque(maxlen=history_length)
 
-    def _reset_states_hist(self):
-        for _ in range(self.history_length):
-            self.states_hist.append(self.clear_state)
-
-    # TODO: Better handling of input_shape
-    def add_state(self, state):
+    def add(self, state, action, reward, done):
         if not self.initialized:
             self.initialized = True
+            state_shape = np.squeeze(state).shape
             # Allocate memory
-            self.states = np.empty(list(np.squeeze(state).shape) + [self.maxlen],
+            self.states = np.empty(state_shape + (self.maxlen,),
                                    dtype=state.dtype)
-            self.actions = np.empty([self.maxlen], dtype=np.int32)
-            self.rewards = np.empty([self.maxlen], dtype=np.float32)
-            self.dones = np.empty([self.maxlen], dtype=np.bool)
+            self.actions = np.empty(self.maxlen, dtype=np.int32)
+            self.rewards = np.empty(self.maxlen, dtype=np.float32)
+            self.dones = np.empty(self.maxlen, dtype=np.bool)
             # Allocate memory for batch
-            self.b_states_t = np.empty([self.batch_size]
-                                       + list(np.squeeze(state).shape)
-                                       + [self.history_length], dtype=state.dtype)
-            self.b_states_tp1 = np.empty([self.batch_size]
-                                         + list(np.squeeze(state).shape)
-                                         + [self.history_length], dtype=state.dtype)
-            # Create state for reseting states history
-            self.clear_state = np.zeros(np.squeeze(state.shape))
-            self._reset_states_hist()
+            self.b_states_t = np.empty((self.batch_size,)
+                                       + np.squeeze(state).shape
+                                       + (self.history_length,), dtype=state.dtype)
+            self.b_states_tp1 = np.empty((self.batch_size,)
+                                         + np.squeeze(state).shape
+                                         + (self.history_length,), dtype=state.dtype)
 
-        # Store state
+        # Store transition
         self.states[..., self.current_idx] = np.squeeze(state)
-        self.states_hist.append(state)
-
-    def add_effect(self, action, reward, done):
         self.actions[self.current_idx] = action
         self.rewards[self.current_idx] = reward
         self.dones[self.current_idx] = done
-
-        # If this step is terminal, reset states history
-        if done:
-            self._reset_states_hist()
 
         # Update current position
         self.current_idx = (self.current_idx + 1) % self.maxlen
         self.current_len = min(self.current_len + 1, self.maxlen)
 
-    def last_state(self):
-        return np.array(self.states_hist, copy=False).swapaxes(0, -1)
-
-    def sample(self, batch_size):
+    def sample(self):
         start_idxs = []
         end_idxs = []
         while len(start_idxs) < self.batch_size:
