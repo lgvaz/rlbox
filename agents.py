@@ -20,6 +20,23 @@ class DQNAgent(BaseAgent):
         # Keep track of past states
         self.states_history = RingBuffer(state_shape, history_length)
 
+    def _play_one_step(self, epsilon, render=False):
+        if render:
+            self.env.render()
+
+        # Concatenates <history_length> states
+        self.states_history.append(self.state)
+        state = self.states_history.get_data()
+
+        # Select and execute action
+        action = self.select_action(state, epsilon)
+        next_state, reward, done, info = self.env.step(action)
+
+        if done:
+            self.states_history.reset()
+
+        return next_state, action, reward, done, info
+
     def select_action(self, state, epsilon):
         # Select action based on an egreedy policy
         if np.random.random() <= epsilon:
@@ -34,18 +51,10 @@ class DQNAgent(BaseAgent):
         self._maybe_create_tf_sess()
         done = False
         while not done:
-            if render:
-                self.env.render()
-
-            self.states_history.append(self.state)
-            state = self.states_history.get_data()
-
-            action = self.select_action(state, epsilon)
-            next_state, reward, done, _ = env.step(action)
+            next_state, action, reward, done, _ = self._play_one_step(epsilon, render)
 
             if done:
                 self.state = env.reset()
-                self.states_history.reset()
             else:
                 self.state = next_state
 
@@ -81,20 +90,15 @@ class DQNAgent(BaseAgent):
             # Populate replay buffer with random agent
             num_init_replays = replay_buffer_size * init_buffer_size
             for i in range(int(num_init_replays)):
-                self.states_history.append(self.state)
-                state = self.states_history.get_data()
-
-                action = self.env.action_space.sample()
-                next_state, reward, done, _ = self.env.step(action)
-
+                next_state, action, reward, done, _ = self._play_one_step(epsilon=1.)
                 self.replay_buffer.add(self.state, action, reward, done)
 
                 if done:
                     self.state = self.env.reset()
-                    self.states_history.reset()
                 else:
                     self.state = next_state
 
+                # Logs
                 if i % 100 == 0:
                     print('\rPopulating replay buffer: {:.1f}%'.format(
                         i * 100 / num_init_replays), end='', flush=True)
@@ -102,14 +106,8 @@ class DQNAgent(BaseAgent):
         reward_sum = 0
         self.model.update_target_net(self.sess)
         for i_step in range(int(num_steps)):
-            self.states_history.append(self.state)
-            state = self.states_history.get_data()
-
-            # Play one step based on a epsilon greedy policy
             epsilon = exploration_schedule(i_step)
-            action = self.select_action(state, epsilon)
-
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, action, reward, done, _ = self._play_one_step(epsilon)
             reward_sum += reward
 
             # Store experience
@@ -118,7 +116,6 @@ class DQNAgent(BaseAgent):
             # Update state
             if done:
                 self.state = self.env.reset()
-                self.states_history.reset()
             else:
                 self.state = next_state
 
