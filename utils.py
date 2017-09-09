@@ -4,6 +4,7 @@ import numpy as np
 from collections import deque
 import tensorflow as tf
 
+
 class RingBuffer:
     ''' Used instead of deque '''
     def __init__(self, shape, maxlen):

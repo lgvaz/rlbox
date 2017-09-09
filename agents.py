@@ -4,6 +4,7 @@ from utils import piecewise_linear_decay
 from utils import ReplayBuffer, RingBuffer
 from model import DQNModel
 from base_agent import BaseAgent
+from print_utils import print_table
 
 
 # TODO: Better way to get history_length, maybe using state_shape
@@ -104,8 +105,9 @@ class DQNAgent(BaseAgent):
                         i * 100 / num_init_replays), end='', flush=True)
 
         reward_sum = 0
+        rewards = []
         self.model.update_target_net(self.sess)
-        for i_step in range(int(num_steps)):
+        for i_step in range(1, int(num_steps) + 1):
             epsilon = exploration_schedule(i_step)
             next_state, action, reward, done, _ = self._play_one_step(epsilon)
             reward_sum += reward
@@ -116,6 +118,8 @@ class DQNAgent(BaseAgent):
             # Update state
             if done:
                 self.state = self.env.reset()
+                rewards.append(reward_sum)
+                reward_sum = 0
             else:
                 self.state = next_state
 
@@ -134,6 +138,10 @@ class DQNAgent(BaseAgent):
             if i_step % target_update_freq == 0:
                 self.model.update_target_net(self.sess)
 
-            if done:
-                print(reward_sum)
-                reward_sum = 0
+            if i_step % 5e4 == 0:
+                header = 'Step {}'.format(i_step)
+                tags = ['Reward Mean [{:.2f} lives]'.format(len(rewards))]
+                values = [str(np.mean(rewards))]
+                print_table(tags, values, header=header)
+
+                rewards = []
