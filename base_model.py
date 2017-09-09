@@ -4,6 +4,7 @@ from utils import huber_loss
 from graphs import deepmind_graph, simple_graph
 
 
+# TODO: Global steps
 class BaseModel:
     def __init__(self, state_shape, num_actions, input_type=None):
         self.state_shape = state_shape

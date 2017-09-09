@@ -7,7 +7,7 @@ from base_model import BaseModel
 
 class DQNModel(BaseModel):
     def __init__(self, state_shape, num_actions, graph=None,
-                 input_type=None, clip_norm=10, gamma=0.99, double=False):
+                 input_type=None, clip_norm=10, gamma=0.99, double=False, log_dir=None):
         super(DQNModel, self).__init__(state_shape, num_actions, input_type)
         self.double = double
 
@@ -32,6 +32,10 @@ class DQNModel(BaseModel):
         # Create training operation
         self.training_op = self._build_optimization(clip_norm, gamma)
         self.update_target_op = self._build_target_update_op()
+
+        # Create summaries
+        if log_dir is not None:
+            self.merged = self._create_summaries_op(log_dir)
 
         # Create collections for loading later
         tf.add_to_collection('state_input', self.states_t_ph)
@@ -61,9 +65,8 @@ class DQNModel(BaseModel):
         clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
                          for grad, var in grads_and_vars if grad is not None]
         training_op = opt.apply_gradients(clipped_grads)
-        increase_global_step = self.global_step_tensor.assign_add(tf.shape(self.dones_ph)[0])
 
-        return tf.group(training_op, increase_global_step)
+        return training_op
 
     def _build_target_update_op(self, alpha=1):
         # Get variables within defined scope
@@ -75,27 +78,7 @@ class DQNModel(BaseModel):
 
         return op_holder
 
-    def predict(self, sess, states):
-        return sess.run(self.q_online_t, feed_dict={self.states_t_ph: states})
-
-    def target_predict(self, sess, states):
-        return sess.run(self.q_target_tp1, feed_dict={self.states_tp1_ph: states})
-
-    def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
-        feed_dict = {
-            self.learning_rate_ph: learning_rate,
-            self.states_t_ph: states_t,
-            self.states_tp1_ph: states_tp1,
-            self.actions_ph: actions,
-            self.rewards_ph: rewards,
-            self.dones_ph: dones
-        }
-        sess.run(self.training_op, feed_dict=feed_dict)
-
-    def update_target_net(self, sess):
-        sess.run(self.update_target_op)
-
-    def create_summaries(self, log_dir):
+    def _create_summaries_op(self, log_dir):
         self.writer = tf.summary.FileWriter(log_dir, graph=tf.get_default_graph())
         tf.summary.scalar('loss', self.total_error)
         tf.summary.scalar('Q_mean', tf.reduce_mean(self.q_online_t))
@@ -103,16 +86,24 @@ class DQNModel(BaseModel):
         tf.summary.histogram('q_values', self.q_online_t)
         merged = tf.summary.merge_all()
 
-        def run_op(sess, step, states_t, states_tp1, actions, rewards, dones):
-            feed_dict = {
-                self.states_t_ph: states_t,
-                self.states_tp1_ph: states_tp1,
-                self.actions_ph: actions,
-                self.rewards_ph: rewards,
-                self.dones_ph: dones
-            }
-            summary, global_step = sess.run([merged, self.global_step_tensor],
-                                            feed_dict=feed_dict)
-            self.writer.add_summary(summary, global_step=global_step)
+        return merged
 
-        return run_op
+    def predict(self, sess, states):
+        return sess.run(self.q_online_t, feed_dict={self.states_t_ph: states})
+
+    def target_predict(self, sess, states):
+        return sess.run(self.q_target_tp1, feed_dict={self.states_tp1_ph: states})
+
+    def update_target_net(self, sess):
+        sess.run(self.update_target_op)
+
+    def write_summaries(self, sess, step, states_t, states_tp1, actions, rewards, dones):
+        feed_dict = {
+            self.states_t_ph: states_t,
+            self.states_tp1_ph: states_tp1,
+            self.actions_ph: actions,
+            self.rewards_ph: rewards,
+            self.dones_ph: dones
+        }
+        summary = sess.run(self.merged, feed_dict=feed_dict)
+        self.writer.add_summary(summary, global_step=step)

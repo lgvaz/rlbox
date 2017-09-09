@@ -11,19 +11,16 @@ from print_utils import print_table
 # TODO: Better way to get history_length, maybe using state_shape
 class DQNAgent(BaseAgent):
     def __init__(self, env, log_dir, history_length=4, graph=None, input_type=None, double=False):
-        super(DQNAgent, self).__init__(env, log_dir)
+        super(DQNAgent, self).__init__(env)
         state_shape = np.squeeze(self.state).shape
         num_actions = env.action_space.n
         self.model = DQNModel(state_shape + (history_length,),
-                              num_actions, graph, double=double)
+                              num_actions, graph, double=double, log_dir=log_dir)
         self.history_length = history_length
         self.replay_buffer = None
 
         # Keep track of past states
         self.states_history = RingBuffer(state_shape, history_length)
-
-        # Create summaries
-        self.summary_writer = self.model.create_summaries(log_dir)
 
     def _play_one_step(self, epsilon, render=False):
         if render:
@@ -64,6 +61,7 @@ class DQNAgent(BaseAgent):
                 self.state = next_state
 
     #TODO: Define how pass lr_func, get_epsilon
+    @profile
     def train(self, num_steps, learning_rate, exploration_schedule, replay_buffer_size, target_update_freq, learning_freq=4, init_buffer_size=0.05, batch_size=32, log_steps=2e4):
         '''
         Trains the agent following these steps:
@@ -147,7 +145,7 @@ class DQNAgent(BaseAgent):
 
             if i_step % log_steps == 0:
                 # Write summaries
-                self.summary_writer(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
+                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
                 # Calculate time
                 end_time = time.time()
                 time_window = end_time - start_time
