@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import tensorflow as tf
 from utils import piecewise_linear_decay
@@ -20,6 +21,9 @@ class DQNAgent(BaseAgent):
 
         # Keep track of past states
         self.states_history = RingBuffer(state_shape, history_length)
+
+        # Create summaries
+        self.summary_writer = self.model.create_summaries(log_dir)
 
     def _play_one_step(self, epsilon, render=False):
         if render:
@@ -60,7 +64,7 @@ class DQNAgent(BaseAgent):
                 self.state = next_state
 
     #TODO: Define how pass lr_func, get_epsilon
-    def train(self, num_steps, learning_rate, exploration_schedule, replay_buffer_size, target_update_freq, learning_freq=4, init_buffer_size=0.05, batch_size=32):
+    def train(self, num_steps, learning_rate, exploration_schedule, replay_buffer_size, target_update_freq, learning_freq=4, init_buffer_size=0.05, batch_size=32, log_steps=2e4):
         '''
         Trains the agent following these steps:
             1. Use the current state to calculate Q-values
@@ -104,9 +108,12 @@ class DQNAgent(BaseAgent):
                     print('\rPopulating replay buffer: {:.1f}%'.format(
                         i * 100 / num_init_replays), end='', flush=True)
 
+        print('\rPopulating replay buffer: DONE!')
+        print('Started training')
         reward_sum = 0
         rewards = []
         self.model.update_target_net(self.sess)
+        start_time = time.time()
         for i_step in range(1, int(num_steps) + 1):
             epsilon = exploration_schedule(i_step)
             next_state, action, reward, done, _ = self._play_one_step(epsilon)
@@ -138,10 +145,26 @@ class DQNAgent(BaseAgent):
             if i_step % target_update_freq == 0:
                 self.model.update_target_net(self.sess)
 
-            if i_step % 5e4 == 0:
-                header = 'Step {}'.format(i_step)
-                tags = ['Reward Mean [{:.2f} lives]'.format(len(rewards))]
-                values = [str(np.mean(rewards))]
+            if i_step % log_steps == 0:
+                # Write summaries
+                self.summary_writer(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
+                # Calculate time
+                end_time = time.time()
+                time_window = end_time - start_time
+                steps_sec = log_steps / time_window
+                eta = time.strftime('%H:%M:%S', time.gmtime((num_steps - i_step) / steps_sec))
+                start_time = end_time
+                # Format data
+                header = 'Step {}/{} ({:.2f}%) ETA: {}'.format(
+                    i_step, int(num_steps), 100 * i_step / num_steps, eta)
+                tags = ['Reward Mean [{} lives]'.format(len(rewards)),
+                        'Learning Rate',
+                        'Exploration Rate',
+                        'Steps/Seconds']
+                values = ['{:.2f}'.format(np.mean(rewards)),
+                          '{:.4f}'.format(lr),
+                          '{:.3f}'.format(epsilon),
+                          '{:.2f}'.format(steps_sec)]
                 print_table(tags, values, header=header)
 
                 rewards = []

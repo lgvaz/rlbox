@@ -61,8 +61,9 @@ class DQNModel(BaseModel):
         clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
                          for grad, var in grads_and_vars if grad is not None]
         training_op = opt.apply_gradients(clipped_grads)
+        increase_global_step = self.global_step_tensor.assign_add(tf.shape(self.dones_ph)[0])
 
-        return training_op
+        return tf.group(training_op, increase_global_step)
 
     def _build_target_update_op(self, alpha=1):
         # Get variables within defined scope
@@ -94,15 +95,15 @@ class DQNModel(BaseModel):
     def update_target_net(self, sess):
         sess.run(self.update_target_op)
 
-    # TODO: Maybe integrate summary writing in self.train
-    def create_summaries(self):
+    def create_summaries(self, log_dir):
+        self.writer = tf.summary.FileWriter(log_dir, graph=tf.get_default_graph())
         tf.summary.scalar('loss', self.total_error)
         tf.summary.scalar('Q_mean', tf.reduce_mean(self.q_online_t))
         tf.summary.scalar('Q_max', tf.reduce_max(self.q_online_t))
         tf.summary.histogram('q_values', self.q_online_t)
         merged = tf.summary.merge_all()
 
-        def run_op(sess, sv, states_t, states_tp1, actions, rewards, dones):
+        def run_op(sess, step, states_t, states_tp1, actions, rewards, dones):
             feed_dict = {
                 self.states_t_ph: states_t,
                 self.states_tp1_ph: states_tp1,
@@ -110,7 +111,8 @@ class DQNModel(BaseModel):
                 self.rewards_ph: rewards,
                 self.dones_ph: dones
             }
-            summary = sess.run(merged, feed_dict=feed_dict)
-            sv.summary_computed(sess, summary)
+            summary, global_step = sess.run([merged, self.global_step_tensor],
+                                            feed_dict=feed_dict)
+            self.writer.add_summary(summary, global_step=global_step)
 
         return run_op
