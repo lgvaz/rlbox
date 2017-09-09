@@ -38,21 +38,14 @@ class ReplayBuffer:
             self.initialized = True
             state_shape = np.squeeze(state).shape
             # Allocate memory
-            self.states = np.empty(state_shape + (self.maxlen,),
+            self.states = np.empty((self.maxlen,) + state_shape,
                                    dtype=state.dtype)
             self.actions = np.empty(self.maxlen, dtype=np.int32)
             self.rewards = np.empty(self.maxlen, dtype=np.float32)
             self.dones = np.empty(self.maxlen, dtype=np.bool)
-            # Allocate memory for batch
-            self.b_states_t = np.empty((self.batch_size,)
-                                       + np.squeeze(state).shape
-                                       + (self.history_length,), dtype=state.dtype)
-            self.b_states_tp1 = np.empty((self.batch_size,)
-                                         + np.squeeze(state).shape
-                                         + (self.history_length,), dtype=state.dtype)
 
         # Store transition
-        self.states[..., self.current_idx] = np.squeeze(state)
+        self.states[self.current_idx] = np.squeeze(state)
         self.actions[self.current_idx] = action
         self.rewards[self.current_idx] = reward
         self.dones[self.current_idx] = done
@@ -62,6 +55,25 @@ class ReplayBuffer:
         self.current_len = min(self.current_len + 1, self.maxlen)
 
     def sample(self):
+
+        start_idxs, end_idxs = self._generate_idxs()
+        # Get states
+        b_states_t = np.array([self.states[start_idx:end_idx] for
+                              start_idx, end_idx in zip(start_idxs, end_idxs)],
+                              copy=False)
+        b_states_tp1 = np.array([self.states[start_idx + 1: end_idx + 1] for
+                                start_idx, end_idx in zip(start_idxs, end_idxs)],
+                                copy=False)
+        # Remember that when spilicing the end_idx is not included
+        actions = self.actions[end_idxs - 1]
+        rewards = self.rewards[end_idxs - 1]
+        dones = self.dones[end_idxs - 1]
+
+        return (b_states_t.swapaxes(1, -1),
+                b_states_tp1.swapaxes(1, -1),
+                actions, rewards, dones)
+
+    def _generate_idxs(self):
         start_idxs = []
         end_idxs = []
         while len(start_idxs) < self.batch_size:
@@ -76,18 +88,11 @@ class ReplayBuffer:
             if np.any(self.dones[start_idx: end_idx - 1]):
                 continue
 
-            self.b_states_t[len(start_idxs)] = self.states[..., start_idx:end_idx]
-            self.b_states_tp1[len(start_idxs)] = self.states[..., start_idx+1:end_idx+1]
+            # Valid idx!!
             start_idxs.append(start_idx)
             end_idxs.append(end_idx)
 
-        # Remember that when spilicing the end_idx is not included
-        end_idxs = np.array(end_idxs)
-        actions = self.actions[end_idxs - 1]
-        rewards = self.rewards[end_idxs - 1]
-        dones = self.dones[end_idxs - 1]
-
-        return self.b_states_t, self.b_states_tp1, actions, rewards, dones
+        return np.array(start_idxs), np.array(end_idxs)
 
 
 def load_q_func(sess, log_dir):

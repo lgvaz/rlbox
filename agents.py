@@ -61,7 +61,6 @@ class DQNAgent(BaseAgent):
                 self.state = next_state
 
     #TODO: Define how pass lr_func, get_epsilon
-    @profile
     def train(self, num_steps, learning_rate, exploration_schedule, replay_buffer_size, target_update_freq, learning_freq=4, init_buffer_size=0.05, batch_size=32, log_steps=2e4):
         '''
         Trains the agent following these steps:
