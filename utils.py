@@ -81,7 +81,7 @@ class ReplayBuffer:
         b_states_tp1 = np.array([self.states[start_idx + 1: end_idx + 1] for
                                 start_idx, end_idx in zip(start_idxs, end_idxs)],
                                 copy=False)
-        # Remember that when spilicing the end_idx is not included
+        # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
         rewards = self.rewards[end_idxs - 1]
         dones = self.dones[end_idxs - 1]
@@ -101,7 +101,6 @@ class ReplayBuffer:
             if start_idx in start_idxs:
                 continue
             # Only the last frame can have done == True
-            # TODO: Check if done checking is correct
             if np.any(self.dones[start_idx: end_idx - 1]):
                 continue
 
