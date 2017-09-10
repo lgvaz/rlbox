@@ -6,25 +6,43 @@ import tensorflow as tf
 
 
 class RingBuffer:
-    ''' Used instead of deque '''
-    def __init__(self, shape, maxlen):
-        self.shape = shape
+    '''
+    Similar function of a deque, but returns a numpy array directly
+    Used for building an array with <maxlen> sequential states
+
+    Args:
+        state_shape: Shape of state (tuple)
+        maxlen: How many states to stack
+    '''
+    def __init__(self, state_shape, maxlen):
+        self.state_shape = state_shape
         self.maxlen = maxlen
         self.current_idx = 0
         self.reset()
 
     def reset(self):
-        self.data = np.zeros((self.shape + (self.maxlen,)))
+        self.data = np.zeros(((self.maxlen,) + self.state_shape))
 
     def append(self, data):
-        self.data = np.roll(self.data, -1, axis=-1)
-        self.data[..., self.maxlen - 1] = np.squeeze(data)
+        self.data = np.roll(self.data, -1, axis=0)
+        self.data[self.maxlen - 1] = np.squeeze(data)
 
     def get_data(self):
-        return self.data
+        return self.data.swapaxes(0, -1)
 
 
 class ReplayBuffer:
+    '''
+    Memory efficient implementation of replay buffer, storing each state only once.
+    Example: Typical use for atari, with each frame being a 84x84 grayscale
+             image (uint8), storing 1M frames should use about 7GiB of RAM
+             (8 * 64 * 64 * 1M bits)
+
+    Args:
+        maxlen: Maximum number of transitions stored
+        history_length: Number of sequential states stacked when sampling
+        batch_size: Mini-batch size created by sample
+    '''
     def __init__(self, maxlen, history_length=1, batch_size=32):
         self.initialized = False
         self.maxlen = maxlen
