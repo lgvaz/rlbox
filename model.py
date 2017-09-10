@@ -8,7 +8,7 @@ from base_model import BaseModel
 class DQNModel(BaseModel):
     def __init__(self, state_shape, num_actions, graph=None,
                  input_type=None, clip_norm=10, gamma=0.99, double=False, log_dir=None):
-        super(DQNModel, self).__init__(state_shape, num_actions, input_type)
+        super(DQNModel, self).__init__(state_shape, num_actions, input_type, log_dir)
         self.double = double
 
         # If input is an image defaults to deepmind_graph, else simple_graph
@@ -35,7 +35,7 @@ class DQNModel(BaseModel):
 
         # Create summaries
         if log_dir is not None:
-            self.merged = self._create_summaries_op(log_dir)
+            self.merged = self._create_summaries_op()
 
         # Create collections for loading later
         tf.add_to_collection('state_input', self.states_t_ph)
@@ -78,8 +78,8 @@ class DQNModel(BaseModel):
 
         return op_holder
 
-    def _create_summaries_op(self, log_dir):
-        self.writer = tf.summary.FileWriter(log_dir, graph=tf.get_default_graph())
+    def _create_summaries_op(self):
+        self._maybe_create_writer(self.log_dir)
         tf.summary.scalar('loss', self.total_error)
         tf.summary.scalar('Q_mean', tf.reduce_mean(self.q_online_t))
         tf.summary.scalar('Q_max', tf.reduce_max(self.q_online_t))

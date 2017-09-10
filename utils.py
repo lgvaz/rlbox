@@ -55,7 +55,6 @@ class ReplayBuffer:
         self.current_len = min(self.current_len + 1, self.maxlen)
 
     def sample(self):
-
         start_idxs, end_idxs = self._generate_idxs()
         # Get states
         b_states_t = np.array([self.states[start_idx:end_idx] for

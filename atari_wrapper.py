@@ -161,7 +161,7 @@ class FrameStack(gym.Wrapper):
         return np.concatenate(self.frames, axis=2)
 
 
-def wrap_deepmind(env, frame_stack=4, frame_skip=4):
+def wrap_deepmind(env, frame_stack=None, frame_skip=4):
     assert 'NoFrameskip' in env.spec.id
     env = EpisodicLifeEnv(env)
     env = NoopResetEnv(env, noop_max=30)
@@ -169,5 +169,7 @@ def wrap_deepmind(env, frame_stack=4, frame_skip=4):
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     env = ProcessFrame84(env)
+    if frame_stack is not None:
+        env = FrameStack(env, frame_stack)
     env = ClippedRewardsWrapper(env)
     return env

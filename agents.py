@@ -10,8 +10,8 @@ from print_utils import print_table
 
 # TODO: Better way to get history_length, maybe using state_shape
 class DQNAgent(BaseAgent):
-    def __init__(self, env, log_dir, history_length=4, graph=None, input_type=None, double=False):
-        super(DQNAgent, self).__init__(env)
+    def __init__(self, env, log_dir, history_length=4, graph=None, input_type=None, double=False, env_wrapper=None):
+        super(DQNAgent, self).__init__(env, log_dir, env_wrapper)
         state_shape = np.squeeze(self.state).shape
         num_actions = env.action_space.n
         self.model = DQNModel(state_shape + (history_length,),
@@ -60,10 +60,12 @@ class DQNAgent(BaseAgent):
             else:
                 self.state = next_state
 
-    #TODO: Define how pass lr_func, get_epsilon
-    def train(self, num_steps, learning_rate, exploration_schedule, replay_buffer_size, target_update_freq, learning_freq=4, init_buffer_size=0.05, batch_size=32, log_steps=2e4):
+    def train(self, num_steps, learning_rate, exploration_schedule,
+              replay_buffer_size, target_update_freq, learning_freq=4,
+              init_buffer_size=0.05, batch_size=32, log_steps=2e4):
         '''
         Trains the agent following these steps:
+            0. Populate replay buffer (init_buffer_size) with transitions of a random agent
             1. Use the current state to calculate Q-values
                and choose an action based on an epsilon-greedy policy
             2. Store experience on the replay buffer
@@ -79,9 +81,12 @@ class DQNAgent(BaseAgent):
                                   called with the current time step as input
                                   (see utils.linear_decay as an example)
             replay_buffer_size: Maximum number of transitions stored on replay buffer
+            target_update_freq: Number of steps between each target update
             learning_freq: Number of steps between each gradient descent update
             init_buffer_size: Percentage of buffer filled with random transitions
                               before the training starts
+            batch_size: Number of samples to use when creating mini-batch from replay buffer
+            log_steps: Number of steps between each log status
         '''
         self._maybe_create_tf_sess()
         # Create replay buffer
@@ -107,10 +112,11 @@ class DQNAgent(BaseAgent):
 
         print('\rPopulating replay buffer: DONE!')
         print('Started training')
+        num_episodes = 0
         reward_sum = 0
         rewards = []
-        self.model.update_target_net(self.sess)
         start_time = time.time()
+        self.model.update_target_net(self.sess)
         for i_step in range(1, int(num_steps) + 1):
             epsilon = exploration_schedule(i_step)
             next_state, action, reward, done, _ = self._play_one_step(epsilon)
@@ -143,25 +149,42 @@ class DQNAgent(BaseAgent):
                 self.model.update_target_net(self.sess)
 
             if i_step % log_steps == 0:
-                # Write summaries
-                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
                 # Calculate time
                 end_time = time.time()
                 time_window = end_time - start_time
                 steps_sec = log_steps / time_window
                 eta = time.strftime('%H:%M:%S', time.gmtime((num_steps - i_step) / steps_sec))
                 start_time = end_time
+                # Calculate rewards statistics
+                ep_rewards = self._monitored_env.get_episode_rewards()
+                num_episodes_old = num_episodes
+                num_episodes = len(ep_rewards)
+                num_new_episodes = num_episodes - num_episodes_old
+                mean_ep_rewards = np.mean(ep_rewards[-num_new_episodes:])
+                mean_life_rewards = np.mean(rewards)
+                # Write summaries
+                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
+                self.model.summary_scalar(self.sess, i_step, 'epsilon', epsilon)
+                self.model.summary_scalar(self.sess, i_step, 'learning_rate', learning_rate)
+                self.model.summary_scalar(self.sess, i_step, 'steps/sec', steps_sec)
+                self.model.summary_scalar(self.sess, i_step, 'reward_by_life',
+                                          mean_life_rewards)
+                self.model.summary_scalar(self.sess, i_step, 'reward_by_episode(unclipped)',
+                                          mean_ep_rewards)
                 # Format data
                 header = 'Step {}/{} ({:.2f}%) ETA: {}'.format(
                     i_step, int(num_steps), 100 * i_step / num_steps, eta)
-                tags = ['Reward Mean [{} lives]'.format(len(rewards)),
+                tags = ['Reward Mean [{} episodes](unclipped)'.format(num_episodes),
+                        'Reward Mean [{} lives]'.format(len(rewards)),
                         'Learning Rate',
                         'Exploration Rate',
                         'Steps/Seconds']
-                values = ['{:.2f}'.format(np.mean(rewards)),
+                values = ['{:.2f}'.format(mean_ep_rewards),
+                          '{:.2f}'.format(mean_life_rewards),
                           '{:.4f}'.format(lr),
                           '{:.3f}'.format(epsilon),
                           '{:.2f}'.format(steps_sec)]
                 print_table(tags, values, header=header)
 
+                # Reset rewards
                 rewards = []

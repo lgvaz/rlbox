@@ -6,10 +6,12 @@ from graphs import deepmind_graph, simple_graph
 
 # TODO: Global steps
 class BaseModel:
-    def __init__(self, state_shape, num_actions, input_type=None):
+    def __init__(self, state_shape, num_actions, input_type=None, log_dir=None):
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
+        self.log_dir = log_dir
+        self.writer = None
 
         # If input is an image defaults to uint8, else defaults to float32
         if input_type is None:
@@ -69,6 +71,9 @@ class BaseModel:
         self.increase_global_step_op = tf.assign_add(self.global_step_tensor, 1,
                                                      name='increase_global_step')
 
+    def _maybe_create_writer(self, logdir):
+        self.writer = tf.summary.FileWriter(logdir, graph=tf.get_default_graph())
+
     def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
             self.learning_rate_ph: learning_rate,
@@ -80,11 +85,12 @@ class BaseModel:
         }
         sess.run(self.training_op, feed_dict=feed_dict)
 
-    def summary_scalar(self, sess, sv, name, value):
+    def summary_scalar(self, sess, step, name, value):
+        self._maybe_create_writer(self.log_dir)
         summary = tf.Summary(value=[
             tf.Summary.Value(tag=name, simple_value=value),
         ])
-        sv.summary_computed(sess, summary)
+        self.writer.add_summary(summary, step)
 
     def increase_global_step(self, sess):
         # Increasing the global step every timestep was consuming too much time
