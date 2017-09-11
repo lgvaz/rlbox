@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from utils import huber_loss
-from graphs import deepmind_graph, simple_graph
-from base_model import BaseModel
+from gymmeforce.common.utils import huber_loss
+from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
+from gymmeforce.models.base_model import BaseModel
 
 
 class DQNModel(BaseModel):

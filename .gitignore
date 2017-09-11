@@ -1,3 +1,7 @@
 *pyc
 *lprof
-/logs
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+*logs/

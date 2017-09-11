@@ -1,11 +1,11 @@
 import time
 import numpy as np
 import tensorflow as tf
-from utils import piecewise_linear_decay
-from utils import ReplayBuffer, RingBuffer
-from model import DQNModel
-from base_agent import BaseAgent
-from print_utils import print_table
+from gymmeforce.common.utils import piecewise_linear_decay
+from gymmeforce.common.utils import ReplayBuffer, RingBuffer
+from gymmeforce.models import DQNModel
+from gymmeforce.agents.base_agent import BaseAgent
+from gymmeforce.common.print_utils import print_table
 
 
 class DQNAgent(BaseAgent):
