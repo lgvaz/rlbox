@@ -135,7 +135,7 @@ def setup(env_name, log_dir, num_lives=5, atari_wrap=True,
     env_monitor_wrap = gym.wrappers.Monitor(env, video_dir, resume=True,
                                             video_callable=lambda x: record)
     if atari_wrap:
-        env = wrap_deepmind(env_monitor_wrap)
+        env = wrap_deepmind(env_monitor_wrap, frame_stack=4)
     else:
         env = env_monitor_wrap
 

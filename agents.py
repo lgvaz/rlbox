@@ -9,7 +9,8 @@ from print_utils import print_table
 
 
 class DQNAgent(BaseAgent):
-    def __init__(self, env, log_dir, history_length=4, graph=None, input_type=None, double=False, env_wrapper=None):
+    def __init__(self, env, log_dir, history_length=4, graph=None,
+                 input_type=None, double=False, env_wrapper=None):
         super(DQNAgent, self).__init__(env, log_dir, env_wrapper)
         state_shape = np.squeeze(self.state).shape
         num_actions = env.action_space.n
@@ -55,7 +56,7 @@ class DQNAgent(BaseAgent):
             next_state, action, reward, done, _ = self._play_one_step(epsilon, render)
 
             if done:
-                self.state = env.reset()
+                self.state = self.env.reset()
             else:
                 self.state = next_state
 

@@ -86,11 +86,17 @@ class BaseModel:
         save_path = os.path.join(self.log_dir, name)
         self._saver.save(sess, save_path, global_step=step)
 
-    def load(self, sess, save_path=None):
+    def load_or_initialize(self, sess, save_path=None):
+        ''' Load from checkpoint if exists, else intialize variables '''
         self._maybe_create_saver()
         if save_path is None:
             save_path = tf.train.latest_checkpoint(self.log_dir)
-        self._saver.restore(sess, save_path)
+        if save_path is None:
+            print('Initializing variables')
+            sess.run(tf.global_variables_initializer())
+        else:
+            print('Loading model from {}'.format(save_path))
+            self._saver.restore(sess, save_path)
 
     def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
