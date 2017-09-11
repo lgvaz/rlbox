@@ -167,7 +167,7 @@ class DQNAgent(BaseAgent):
                 # Write summaries
                 self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
                 self.model.summary_scalar(self.sess, i_step, 'epsilon', epsilon)
-                self.model.summary_scalar(self.sess, i_step, 'learning_rate', learning_rate)
+                self.model.summary_scalar(self.sess, i_step, 'learning_rate', lr)
                 self.model.summary_scalar(self.sess, i_step, 'steps/sec', steps_sec)
                 self.model.summary_scalar(self.sess, i_step, 'reward_by_life',
                                           mean_life_rewards)
