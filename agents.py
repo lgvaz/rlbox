@@ -8,7 +8,6 @@ from base_agent import BaseAgent
 from print_utils import print_table
 
 
-# TODO: Better way to get history_length, maybe using state_shape
 class DQNAgent(BaseAgent):
     def __init__(self, env, log_dir, history_length=4, graph=None, input_type=None, double=False, env_wrapper=None):
         super(DQNAgent, self).__init__(env, log_dir, env_wrapper)
@@ -149,6 +148,8 @@ class DQNAgent(BaseAgent):
                 self.model.update_target_net(self.sess)
 
             if i_step % log_steps == 0:
+                # Save model
+                self.model.save(self.sess, i_step)
                 # Calculate time
                 end_time = time.time()
                 time_window = end_time - start_time

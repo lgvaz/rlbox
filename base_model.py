@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 from utils import huber_loss
@@ -11,7 +12,8 @@ class BaseModel:
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
         self.log_dir = log_dir
-        self.writer = None
+        self._saver = None
+        self._writer = None
 
         # If input is an image defaults to uint8, else defaults to float32
         if input_type is None:
@@ -72,7 +74,23 @@ class BaseModel:
                                                      name='increase_global_step')
 
     def _maybe_create_writer(self, logdir):
-        self.writer = tf.summary.FileWriter(logdir, graph=tf.get_default_graph())
+        if self._writer is None:
+            self._writer = tf.summary.FileWriter(logdir, graph=tf.get_default_graph())
+
+    def _maybe_create_saver(self):
+        if self._saver is None:
+            self._saver = tf.train.Saver()
+
+    def save(self, sess, step, name='model'):
+        self._maybe_create_saver()
+        save_path = os.path.join(self.log_dir, name)
+        self._saver.save(sess, save_path, global_step=step)
+
+    def load(self, sess, save_path=None):
+        self._maybe_create_saver()
+        if save_path is None:
+            save_path = tf.train.latest_checkpoint(self.log_dir)
+        self._saver.restore(sess, save_path)
 
     def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
@@ -90,7 +108,7 @@ class BaseModel:
         summary = tf.Summary(value=[
             tf.Summary.Value(tag=name, simple_value=value),
         ])
-        self.writer.add_summary(summary, step)
+        self._writer.add_summary(summary, step)
 
     def increase_global_step(self, sess):
         # Increasing the global step every timestep was consuming too much time

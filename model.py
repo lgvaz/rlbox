@@ -106,4 +106,4 @@ class DQNModel(BaseModel):
             self.dones_ph: dones
         }
         summary = sess.run(self.merged, feed_dict=feed_dict)
-        self.writer.add_summary(summary, global_step=step)
+        self._writer.add_summary(summary, global_step=step)
