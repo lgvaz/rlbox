@@ -176,14 +176,14 @@ class DQNAgent(BaseAgent):
                 # Format data
                 header = 'Step {}/{} ({:.2f}%) ETA: {}'.format(
                     i_step, int(num_steps), 100 * i_step / num_steps, eta)
-                tags = ['Reward Mean [{} episodes](unclipped)'.format(num_episodes),
+                tags = ['Reward Mean [{} episodes](unclipped)'.format(num_new_episodes),
                         'Reward Mean [{} lives]'.format(len(rewards)),
                         'Learning Rate',
                         'Exploration Rate',
                         'Steps/Seconds']
                 values = ['{:.2f}'.format(mean_ep_rewards),
                           '{:.2f}'.format(mean_life_rewards),
-                          '{:.4f}'.format(lr),
+                          '{:.5f}'.format(lr),
                           '{:.3f}'.format(epsilon),
                           '{:.2f}'.format(steps_sec)]
                 print_table(tags, values, header=header)
