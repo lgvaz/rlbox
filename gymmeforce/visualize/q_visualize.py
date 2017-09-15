@@ -1,161 +1,107 @@
-import os
-import gym
-import fire
 import numpy as np
-import tensorflow as tf
-from gymmeforce.common.utils import load_q_func, discounted_sum_rewards
-from gymmeforce.wrappers import wrap_deepmind
+from gymmeforce.agents import DQNAgent
+from gymmeforce.common.utils import discounted_sum_rewards
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 plt.style.use('ggplot')
 
-
-class Agent():
-    def __init__(self, env, sess, q_func, render=True, end_life_plot=True,
-                 live_plot=True, plot_interval=4):
-        self.env = env
-        self.sess = sess
-        self.q_func = q_func
-        self.render = render
-        self.end_life_plot = end_life_plot
-        self.live_plot = live_plot
-        self.plot_interval = plot_interval
+class DQNVisualize(DQNAgent):
+    def __init__(self, env_name, log_dir, history_length=4, graph=None,
+                 input_type=None, double=False, env_wrapper=None):
+        # TODO: Assert that log_dir already exists
+        super(DQNVisualize, self).__init__(env_name, log_dir, history_length,
+                                           graph, input_type, double, env_wrapper)
+        # Create enviroment
+        self.monitored_env, self.env = self._create_env(env_name)
+        self.state = self.env.reset()
         try:
-            self.action_meanings = env.unwrapped.get_action_meanings()
+            self.action_meanings = self.env.unwrapped.get_action_meanings()
         except:
-            self.action_meanings = np.arange(env.action_space.n)
+            self.action_meanings = np.arange(self.env.action_space.n)
 
-    def _play_one_step(self):
-        if self.render:
-            self.env.render()
-        # Add some noise so deterministic envs dont roll all the same
-        Q_values = self.q_func(self.state[np.newaxis])
-        if np.random.random() <= 0.01:
+    def select_action(self, state, epsilon=0.01):
+        Q_values = self.model.predict(self.sess, state[np.newaxis])
+        if np.random.random() <= epsilon:
             action = self.env.action_space.sample()
         else:
             action = np.argmax(Q_values)
 
-        # Execute action
-        next_state, reward, done, _ = self.env.step(action)
+        return action, Q_values
 
-        # Update state
-        if done:
-            self.state = self.env.reset()
-        else:
-            self.state = next_state
+    def _play_one_step(self, epsilon, plot_interval=4, render=True):
+        for _ in range(plot_interval):
+            if render:
+                self.env.render()
 
-        return Q_values, reward, done
+            # Concatenates <history_length> states
+            self.states_history.append(self.state)
+            state_hist = self.states_history.get_data()
 
-    def _play_one_life(self):
-        for _ in range(self.plot_interval):
-            Q_values, reward, done = self._play_one_step()
-            # The value of the state in just max Q
+            # Select and execute action
+            action, Q_values = self.select_action(state_hist, epsilon)
+            next_state, reward, done, info = self.env.step(action)
+
             self.state_values.append(np.max(Q_values))
             self.rewards.append(reward)
 
-            # If done, stop animation
             if done:
-                if self.live_plot:
-                    self.anim.event_source.stop()
-                    plt.close()
+                self.state = self.env.reset()
+                self.states_history.reset()
+                self.anim.event_source.stop()
+                plt.close()
                 break
+            else:
+                self.state = next_state
 
-        return self.state_values, np.squeeze(Q_values), done
+        return np.squeeze(Q_values), reward, done
 
-    def play_one_life(self):
-        self.state = self.env.reset()
-        self.state_values = []
-        self.rewards = []
-        if self.live_plot:
-            # Live plotting setup
-            fig, animate = create_animate_func(self._play_one_life,
-                                               self.action_meanings)
+    def visualize(self, num_lives=3, render=True):
+        self._maybe_create_tf_sess()
+        for _ in range(num_lives):
+            self.state_values = []
+            self.rewards = []
+            fig, animate = self.create_animate_func(render=render)
             self.anim = animation.FuncAnimation(fig, animate, interval=1)
             # Program will stay here until plt.close() is called
             plt.show()
-        else:
-            done = False
-            while not done:
-                _, _, done = self._play_one_life()
-        # Plot over all lifetime
-        if self.end_life_plot:
+            # Compare estimated state value to real return
             discounted_rewards = discounted_sum_rewards(self.rewards)
             plt.plot(self.state_values, label='Estimated return')
             plt.plot(discounted_rewards, label='Real return')
             plt.legend()
             plt.show()
 
+    def create_animate_func(self, epsilon=0.01, window=100, render=True):
+        '''
+        Create a live matplotlib plot
 
-def create_animate_func(func, action_meanings, window=100):
-    '''
-    Create a live matplotlib plot
+        Args:
+            func: function to animate
+            action_meanings: label display when plotting value of actions
+            window: maximum points shown in plot
+        '''
+        fig, ax = plt.subplots(2, 1)
 
-    Args:
-        func: function to animate
-        action_meanings: label display when plotting value of actions
-        window: maximum points shown in plot
-    '''
-    fig, ax = plt.subplots(2, 1)
+        def animate(i):
+            q_values, _, _ = self._play_one_step(epsilon, render=render)
 
-    def animate(i):
-        state_values, q_values, _ = func()
+            # TODO: Also plot real return live?
+            # Plot value function
+            ax[0].clear()
+            ax[0].plot(self.state_values[::-1][:window])
+            ax[0].set_title('Value function')
+            ax[0].set_xlim(0, window)
+            ax[0].set_xticks([])
+            ax[0].xaxis.grid(False)
+            # Plot value of actions
+            ind = np.arange(len(q_values))
+            width = 0.4
+            ax[1].clear()
+            ax[1].bar(ind + width / 2, q_values, width)
+            ax[1].set_title('Action Values')
+            ax[1].set_xticks(ind + width / 2)
+            ax[1].set_xticklabels(self.action_meanings)
+            ax[1].xaxis.grid(False)
 
-        # TODO: Also plot real return live?
-        # Plot value function
-        ax[0].clear()
-        ax[0].plot(state_values[::-1][:window])
-        ax[0].set_title('Value function')
-        ax[0].set_xlim(0, window)
-        ax[0].set_xticks([])
-        ax[0].xaxis.grid(False)
-        # Plot value of actions
-        ind = np.arange(len(q_values))
-        width = 0.4
-        ax[1].clear()
-        ax[1].bar(ind + width / 2, q_values, width)
-        ax[1].set_title('Action Values')
-        ax[1].set_xticks(ind + width / 2)
-        ax[1].set_xticklabels(action_meanings)
-        ax[1].xaxis.grid(False)
-
-    return fig, animate
-
-
-# TODO: Find another way to find if need to atari_wrap
-def setup(env_name, log_dir, num_lives=5, atari_wrap=True,
-          end_life_plot=True, live_plot=True, render=True, record=False):
-
-    # Create enviroment
-    env = gym.make(env_name)
-    # Create videos directory
-    video_dir = os.path.join(log_dir, 'videos/eval/')
-    if not os.path.exists(video_dir):
-        os.makedirs(video_dir)
-    env_monitor_wrap = gym.wrappers.Monitor(env, video_dir, resume=True,
-                                            video_callable=lambda x: record)
-    if atari_wrap:
-        env = wrap_deepmind(env_monitor_wrap, frame_stack=4)
-    else:
-        env = env_monitor_wrap
-
-    with tf.Session() as sess:
-        q_func = load_q_func(sess, log_dir)
-        agent = Agent(env, sess, q_func, end_life_plot=end_life_plot,
-                      live_plot=live_plot, render=render)
-
-        for i_life in range(num_lives):
-            print('\rLife {}/{}'.format(i_life + 1, num_lives), end='')
-            agent.play_one_life()
-
-    ep_rewards = env_monitor_wrap.get_episode_rewards()
-    print('Episodes rewards: {}'.format(ep_rewards))
-    print('---------------------')
-    print('Rewards mean: {}'.format(np.mean(ep_rewards)))
-    print('Maximum reward: {}'.format(np.max(ep_rewards)))
-    print('Minimum reward: {}'.format(np.min(ep_rewards)))
-    print('---------------------')
-
-
-if __name__ == '__main__':
-    fire.Fire(setup)
+        return fig, animate
