@@ -3,8 +3,8 @@ import gym
 import fire
 import numpy as np
 import tensorflow as tf
-from utils import load_q_func, discounted_sum_rewards
-from atari_wrapper import wrap_deepmind
+from gymmeforce.common.utils import load_q_func, discounted_sum_rewards
+from gymmeforce.wrappers import wrap_deepmind
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
