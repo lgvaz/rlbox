@@ -47,16 +47,36 @@ class DQNAgent(BaseAgent):
 
         return action
 
-    def play_one_life(self, epsilon=0.01, render=True):
+    def play_n_lives(self, num_lives, epsilon=0.01, render=True, record=False):
+        monitored_env, env = self._create_env('videos/eval', record)
+        state = env.reset()
         self._maybe_create_tf_sess()
-        done = False
-        while not done:
-            next_state, action, reward, done, _ = self._play_one_step(epsilon, render)
+        for _ in range(num_lives):
+            done = False
+            while not done:
+                next_state, action, reward, done, _ = self._play_one_step(env,
+                                                                          state,
+                                                                          epsilon,
+                                                                          render)
 
-            if done:
-                self.state = self.env.reset()
-            else:
-                self.state = next_state
+                if done:
+                    state = env.reset()
+                else:
+                    state = next_state
+
+        # Print logs
+        rewards = monitored_env.get_episode_rewards()
+        header = '{} Episodes'.format(len(rewards))
+        tags = ['Reward Mean (unclipped)',
+                'Reward std_dev',
+                'Max reward',
+                'Min reward']
+        values = ['{:.2f}'.format(np.mean(rewards)),
+                  '{:.2f}'.format(np.std(rewards)),
+                  '{:.2f}'.format(np.max(rewards)),
+                  '{:.2f}'.format(np.min(rewards))]
+        print_table(tags, values, header=header)
+
 
     def train(self, num_steps, learning_rate, exploration_schedule,
               replay_buffer_size, target_update_freq, learning_freq=4,
