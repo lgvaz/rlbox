@@ -5,7 +5,7 @@ from gymmeforce.common.utils import piecewise_linear_decay
 
 
 # Create gym enviroment
-env = gym.make('SpaceInvadersNoFrameskip-v4')
+env_name = 'SpaceInvadersNoFrameskip-v4'
 
 # Define learning rate and exploration schedule
 num_steps = 40e6
@@ -17,7 +17,7 @@ exploration_rate_schedule = piecewise_linear_decay(boundaries=[1e6, 0.5 * num_st
                                                    initial_value=1.)
 
 # Create agent
-agent = DQNAgent(env=env,
+agent = DQNAgent(env_name=env_name,
                  log_dir='logs/space_invaders/v0',
                  double=True,
                  env_wrapper=wrap_deepmind)
