@@ -54,11 +54,9 @@ class DQNAgent(BaseAgent):
         for _ in range(num_lives):
             done = False
             while not done:
-                next_state, action, reward, done, _ = self._play_one_step(env,
-                                                                          state,
-                                                                          epsilon,
-                                                                          render)
-
+                next_state, action, reward, done, _ = self._play_one_step(env, state,
+                                                                          epsilon, render)
+                # Update state
                 if done:
                     state = env.reset()
                 else:
