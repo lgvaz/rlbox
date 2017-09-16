@@ -14,5 +14,7 @@ pip install -e .
 <img src="assets/lunar_lander.gif" width="280" height="200" />  
 **Standard DQN run on Breakout**  
 Mean reward after training: 421 (100 episodes)  
+Dark blue: Standard DQN  
+Light blue: Double DQN  
 ![Breakout reward](assets/breakout_plots.png)  
 
