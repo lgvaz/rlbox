@@ -12,6 +12,7 @@ class BaseModel:
         self.num_actions = num_actions
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
         self.log_dir = log_dir
+        self.merged = None
         self._saver = None
         self._writer = None
 
@@ -87,7 +88,7 @@ class BaseModel:
         self._saver.save(sess, save_path, global_step=step)
 
     def load_or_initialize(self, sess, save_path=None):
-        ''' Load from checkpoint if exists, else intialize variables '''
+        ''' Load from checkpoint if exists, else initialize variables '''
         self._maybe_create_saver()
         if save_path is None:
             save_path = tf.train.latest_checkpoint(self.log_dir)

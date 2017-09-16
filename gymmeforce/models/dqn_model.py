@@ -33,10 +33,6 @@ class DQNModel(BaseModel):
         self.training_op = self._build_optimization(clip_norm, gamma)
         self.update_target_op = self._build_target_update_op()
 
-        # Create summaries
-        if log_dir is not None:
-            self.merged = self._create_summaries_op()
-
         # Create collections for loading later
         tf.add_to_collection('state_input', self.states_t_ph)
         tf.add_to_collection('q_online_t', self.q_online_t)
@@ -98,6 +94,8 @@ class DQNModel(BaseModel):
         sess.run(self.update_target_op)
 
     def write_summaries(self, sess, step, states_t, states_tp1, actions, rewards, dones):
+        if self.merged is None:
+            self.merged = self._create_summaries_op()
         feed_dict = {
             self.states_t_ph: states_t,
             self.states_tp1_ph: states_tp1,
