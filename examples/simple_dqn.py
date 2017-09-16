@@ -5,25 +5,25 @@ from gymmeforce.common.utils import piecewise_linear_decay
 
 
 # Create gym enviroment
-env_name = 'SpaceInvadersNoFrameskip-v4'
+env_name = 'LunarLander-v2'
 
 # Define learning rate and exploration schedule
-num_steps = 40e6
+num_steps = 6e5
 learning_rate_schedule = piecewise_linear_decay(boundaries=[0.1 * num_steps, 0.5 * num_steps],
-                                                values=[1, .5, .5],
-                                                initial_value=1e-4)
-exploration_schedule = piecewise_linear_decay(boundaries=[1e6, 0.5 * num_steps],
+                                                values=[1, .1, .1],
+                                                initial_value=1e-3)
+exploration_schedule = piecewise_linear_decay(boundaries=[0.1 * num_steps, 0.5 * num_steps],
                                               values=[.1, .01, .01],
                                               initial_value=1.)
 
 # Create agent
 agent = DQNAgent(env_name=env_name,
-                 log_dir='logs/space_invaders/v0',
-                 double=True,
-                 env_wrapper=wrap_deepmind)
+                 log_dir='logs/lunar_lander/double_v0',
+                 history_length=1,
+                 double=True)
 # Train
 agent.train(num_steps=num_steps,
             learning_rate=learning_rate_schedule,
             exploration_schedule=exploration_schedule,
-            replay_buffer_size=1e6,
-            target_update_freq=30000)
+            replay_buffer_size=2e4,
+            target_update_freq=1000)
