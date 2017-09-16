@@ -1,6 +1,5 @@
 import gym
 from gymmeforce.agents import DQNAgent
-from gymmeforce.wrappers import wrap_deepmind
 from gymmeforce.common.utils import piecewise_linear_decay
 
 
