@@ -8,7 +8,7 @@ def deepmind_graph(states, num_actions, scope, reuse=None):
         # Convolutional layers
         net = tf.layers.conv2d(net, 32, (8, 8), strides=(4, 4), activation=tf.nn.relu)
         net = tf.layers.conv2d(net, 64, (4, 4), strides=(2, 2), activation=tf.nn.relu)
-        net = tf.layers.conv2d(net, 32, (3, 3), strides=(1, 1), activation=tf.nn.relu)
+        net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1), activation=tf.nn.relu)
         net = tf.contrib.layers.flatten(net)
 
         # Dense layers
