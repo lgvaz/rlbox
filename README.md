@@ -2,7 +2,7 @@
 *Work in progress...*  
 ## Installation
 ```bash
-git clone https://github.com/lgvaz/gymmeforce  
+git clone https://github.com/lgvaz/gymmeforce.git  
 cd gymmeforce  
 pip install -e .  
 ```
