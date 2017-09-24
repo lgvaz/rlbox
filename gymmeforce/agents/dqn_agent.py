@@ -10,10 +10,11 @@ from gymmeforce.common.print_utils import print_table
 
 class DQNAgent(BaseAgent):
     def __init__(self, env_name, log_dir, history_length=4, graph=None,
-                 input_type=None, double=False, env_wrapper=None):
+                 input_type=None, double=False, dueling=False, env_wrapper=None):
         super(DQNAgent, self).__init__(env_name, log_dir, env_wrapper)
         self.model = DQNModel(self.state_shape + (history_length,),
-                              self.num_actions, graph, double=double, log_dir=log_dir)
+                              self.num_actions, graph, double=double,
+                              dueling=dueling, log_dir=log_dir)
         self.history_length = history_length
         self.replay_buffer = None
 

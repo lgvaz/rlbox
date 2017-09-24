@@ -7,7 +7,8 @@ from gymmeforce.models.base_model import BaseModel
 
 class DQNModel(BaseModel):
     def __init__(self, state_shape, num_actions, graph=None,
-                 input_type=None, clip_norm=10, gamma=0.99, double=False, log_dir=None):
+                 input_type=None, clip_norm=10, gamma=0.99,
+                 double=False, dueling=False, log_dir=None):
         super(DQNModel, self).__init__(state_shape, num_actions, input_type, log_dir)
         self.double = double
 
@@ -23,11 +24,11 @@ class DQNModel(BaseModel):
             print('Using custom graph')
 
         # Create graphs
-        self.q_online_t = graph(self.states_t, num_actions, 'online')
-        self.q_target_tp1 = graph(self.states_tp1, num_actions, 'target')
+        self.q_online_t = graph(self.states_t, num_actions, 'online', dueling=dueling)
+        self.q_target_tp1 = graph(self.states_tp1, num_actions, 'target', dueling=dueling)
         if double:
-            self.q_online_tp1 = graph(self.states_tp1, num_actions,
-                                      'online', reuse=True)
+            self.q_online_tp1 = graph(self.states_tp1, num_actions, 'online',
+                                      reuse=True, dueling=dueling)
 
         # Create training operation
         self.training_op = self._build_optimization(clip_norm, gamma)
