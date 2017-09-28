@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 import numpy as np
 import tensorflow as tf
 from gymmeforce.common.utils import piecewise_linear_decay
@@ -178,7 +179,9 @@ class DQNAgent(BaseAgent):
                 end_time = time.time()
                 time_window = end_time - start_time
                 steps_sec = log_steps / time_window
-                eta = time.strftime('%H:%M:%S', time.gmtime((num_steps - i_step) / steps_sec))
+                eta_seconds = (num_steps - i_step) / steps_sec
+                # Format days, hours, minutes, seconds and remove miliseconds
+                eta_formatted = str(timedelta(seconds=eta_seconds)).split('.')[0]
                 start_time = end_time
                 # Calculate rewards statistics
                 ep_rewards = monitored_env.get_episode_rewards()
@@ -198,7 +201,7 @@ class DQNAgent(BaseAgent):
                                           mean_ep_rewards)
                 # Format data
                 header = 'Step {}/{} ({:.2f}%) ETA: {}'.format(
-                    i_step, int(num_steps), 100 * i_step / num_steps, eta)
+                    i_step, int(num_steps), 100 * i_step / num_steps, eta_formatted)
                 tags = ['Reward Mean [{} episodes](unclipped)'.format(num_new_episodes),
                         'Reward Mean [{} lives]'.format(len(rewards)),
                         'Learning Rate',
