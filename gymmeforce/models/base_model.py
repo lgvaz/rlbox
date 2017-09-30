@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import huber_loss
 from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 

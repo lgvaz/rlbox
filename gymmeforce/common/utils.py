@@ -131,18 +131,6 @@ def load_q_func(sess, log_dir):
     return compute_q_values
 
 
-def huber_loss(y_true, y_pred, delta=1.):
-    '''
-    Hubber loss is less sensitive to outliers
-    https://en.wikipedia.org/wiki/Huber_loss
-    '''
-    error = y_true - y_pred
-    condition = tf.abs(error) <= delta
-    squared_error = 0.5 * tf.square(error)
-    linear_error = delta * (tf.abs(error) - 0.5 * delta)
-    return tf.where(condition, squared_error, linear_error)
-
-
 def exponential_decay(epsilon_final, stop_exploration):
     ''' Calculate epsilon based on an exponential interpolation '''
     epsilon_step = - np.log(epsilon_final) / stop_exploration

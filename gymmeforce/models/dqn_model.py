@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import huber_loss
 from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 from gymmeforce.models.base_model import BaseModel
 
@@ -50,8 +49,7 @@ class DQNModel(BaseModel):
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)
         td_target = self.rewards_ph + (1 - self.dones_ph) * gamma * q_tp1
-        # errors = tf.squared_difference(q_t, td_target)
-        errors = huber_loss(q_t, td_target)
+        errors = tf.losses.huber_loss(labels=td_target, predictions=q_t)
         self.total_error = tf.reduce_mean(errors)
 
         # Create training operation
