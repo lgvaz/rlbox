@@ -57,8 +57,9 @@ class DQNModel(BaseModel):
         # Clip gradients
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
         grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
-        clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
-                         for grad, var in grads_and_vars if grad is not None]
+        with tf.variable_scope('gradient_clipping'):
+            clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
+                            for grad, var in grads_and_vars if grad is not None]
         training_op = opt.apply_gradients(clipped_grads)
 
         return training_op
