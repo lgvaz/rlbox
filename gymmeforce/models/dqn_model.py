@@ -6,8 +6,7 @@ from gymmeforce.models.base_model import BaseModel
 
 class DQNModel(BaseModel):
     def __init__(self, state_shape, num_actions, graph=None,
-                 input_type=None, clip_norm=10, gamma=0.99,
-                 double=False, dueling=False, log_dir=None):
+                 input_type=None, double=False, dueling=False, log_dir=None):
         super(DQNModel, self).__init__(state_shape, num_actions, input_type, log_dir)
         self.double = double
 
@@ -29,9 +28,9 @@ class DQNModel(BaseModel):
             self.q_online_tp1 = graph(self.states_tp1, num_actions, 'online',
                                       reuse=True, dueling=dueling)
 
-        # Create training operation
-        self.training_op = self._build_optimization(clip_norm, gamma)
-        self.update_target_op = self._build_target_update_op()
+        # Training ops
+        self.training_op = None
+        self.update_target_op = None
 
         # Create collections for loading later
         tf.add_to_collection('state_input', self.states_t_ph)
@@ -64,12 +63,13 @@ class DQNModel(BaseModel):
 
         return training_op
 
-    def _build_target_update_op(self, alpha=1):
+    def _build_target_update_op(self, target_soft_update=1.):
         # Get variables within defined scope
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'online')
         target_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'target')
         # Create operations that copy the variables
-        op_holder = [target_var.assign(alpha * online_var + (1 - alpha) * target_var)
+        op_holder = [target_var.assign(target_soft_update * online_var
+                                       + (1 - target_soft_update) * target_var)
                      for online_var, target_var in zip(online_vars, target_vars)]
 
         return op_holder
@@ -83,6 +83,11 @@ class DQNModel(BaseModel):
         merged = tf.summary.merge_all()
 
         return merged
+
+    def create_training_ops(self, gamma, clip_norm, target_soft_update):
+        # Create training operations
+        self.training_op = self._build_optimization(clip_norm, gamma)
+        self.update_target_op = self._build_target_update_op(target_soft_update)
 
     def predict(self, sess, states):
         return sess.run(self.q_online_t, feed_dict={self.states_t_ph: states})

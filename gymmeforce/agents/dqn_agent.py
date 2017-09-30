@@ -13,8 +13,10 @@ class DQNAgent(BaseAgent):
     def __init__(self, env_name, log_dir, history_length=4, graph=None,
                  input_type=None, double=False, dueling=False, env_wrapper=None):
         super(DQNAgent, self).__init__(env_name, log_dir, env_wrapper)
+
+        # Create underlying model
         self.model = DQNModel(self.state_shape + (history_length,),
-                              self.num_actions, graph, double=double,
+                              self.num_actions, graph=graph, double=double,
                               dueling=dueling, log_dir=log_dir)
         self.history_length = history_length
         self.replay_buffer = None
@@ -79,7 +81,8 @@ class DQNAgent(BaseAgent):
 
 
     def train(self, num_steps, learning_rate, exploration_schedule,
-              replay_buffer_size, target_update_freq, learning_freq=4,
+              replay_buffer_size, target_update_freq, target_soft_update=1.,
+              gamma=0.99, clip_norm=10, learning_freq=4,
               init_buffer_size=0.05, batch_size=32, log_steps=2e4):
         '''
         Trains the agent following these steps:
@@ -94,12 +97,17 @@ class DQNAgent(BaseAgent):
             num_steps: Number of steps to train the agent
             learning_rate: Float or a function that returns a float
                            when called with the current time step as input
-                           (see utils.linear_decay as an example)
+                           (see gymmeforce.utils.linear_decay as an example)
             exploration_schedule: Function that returns a float when
                                   called with the current time step as input
                                   (see utils.linear_decay as an example)
             replay_buffer_size: Maximum number of transitions stored on replay buffer
             target_update_freq: Number of steps between each target update
+            target_soft_update: Percentage of online weigth value to copy to target on
+                                each update, (e.g. 1 makes target weights = online weights)
+            gamma: Discount factor on sum of rewards
+            clip_norm: Value to clip the gradient so that its L2-norm is less than or
+                       equal to clip_norm
             learning_freq: Number of steps between each gradient descent update
             init_buffer_size: Percentage of buffer filled with random transitions
                               before the training starts
@@ -110,6 +118,8 @@ class DQNAgent(BaseAgent):
         monitored_env, env = self._create_env('videos/train', 500)
         state = env.reset()
 
+        # Create training ops
+        self.model.create_training_ops(gamma, clip_norm, target_soft_update)
         # Create Session
         self._maybe_create_tf_sess()
 
