@@ -43,11 +43,12 @@ class ReplayBuffer:
         history_length: Number of sequential states stacked when sampling
         batch_size: Mini-batch size created by sample
     '''
-    def __init__(self, maxlen, history_length=1, batch_size=32):
-        self.initialized = False
+    def __init__(self, maxlen, history_length=1, batch_size=32, n_step=1):
         self.maxlen = maxlen
         self.history_length = history_length
         self.batch_size = batch_size
+        self.n_step = n_step
+        self.initialized = False
         self.current_idx = 0
         self.current_len = 0
 
@@ -75,15 +76,16 @@ class ReplayBuffer:
     def sample(self):
         start_idxs, end_idxs = self._generate_idxs()
         # Get states
-        b_states_t = np.array([self.states[start_idx:end_idx] for
+        b_states_t = np.array([self.states[start_idx : end_idx] for
                               start_idx, end_idx in zip(start_idxs, end_idxs)],
                               copy=False)
-        b_states_tp1 = np.array([self.states[start_idx + 1: end_idx + 1] for
-                                start_idx, end_idx in zip(start_idxs, end_idxs)],
+        b_states_tp1 = np.array([self.states[start_idx + self.n_step : end_idx + self.n_step]
+                                for start_idx, end_idx in zip(start_idxs, end_idxs)],
                                 copy=False)
+        rewards = np.array([self.rewards[end_idx - 1 : end_idx + self.n_step - 1]
+                            for end_idx in end_idxs], copy=False)
         # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
-        rewards = self.rewards[end_idxs - 1]
         dones = self.dones[end_idxs - 1]
 
         return (b_states_t.swapaxes(1, -1),
@@ -94,14 +96,20 @@ class ReplayBuffer:
         start_idxs = []
         end_idxs = []
         while len(start_idxs) < self.batch_size:
-            start_idx = np.random.randint(0, self.current_len - self.history_length)
+            start_idx = np.random.randint(0, self.current_len
+                                          - self.history_length
+                                          - self.n_step)
             end_idx = start_idx + self.history_length
 
             # Check if idx was already picked
             if start_idx in start_idxs:
                 continue
-            # Only the last frame can have done == True
-            if np.any(self.dones[start_idx: end_idx - 1]):
+
+            # Check if state contains frames only from a single episode
+            if np.any(self.dones[start_idx : end_idx - 1]):
+                continue
+            # Check if next_state contains frames only from a single episode
+            if np.any(self.dones[end_idx : end_idx + self.n_step - 1]):
                 continue
 
             # Valid idx!!
@@ -200,3 +208,11 @@ def discounted_sum_rewards(rewards, gamma=0.99):
         discounted_rewards.append(reward_sum)
 
     return discounted_rewards[::-1]
+
+def discounted_sum_rewards_final_sum(rewards, gamma=0.99):
+    reward_sum = 0
+
+    for reward in reversed(rewards):
+        reward_sum = reward + gamma * reward_sum
+
+    return reward_sum

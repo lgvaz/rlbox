@@ -2,7 +2,7 @@ import time
 from datetime import timedelta
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import piecewise_linear_decay
+from gymmeforce.common.utils import discounted_sum_rewards_final_sum
 from gymmeforce.common.utils import ReplayBuffer, RingBuffer
 from gymmeforce.models import DQNModel
 from gymmeforce.agents.base_agent import BaseAgent
@@ -80,7 +80,7 @@ class DQNAgent(BaseAgent):
         print_table(tags, values, header=header)
 
 
-    def train(self, num_steps, learning_rate, exploration_schedule,
+    def train(self, num_steps, n_step, learning_rate, exploration_schedule,
               replay_buffer_size, target_update_freq, target_soft_update=1.,
               gamma=0.99, clip_norm=10, learning_freq=4,
               init_buffer_size=0.05, batch_size=32, log_steps=2e4):
@@ -95,6 +95,7 @@ class DQNAgent(BaseAgent):
 
         Args:
             num_steps: Number of steps to train the agent
+            n_step: Number of steps to use reward before bootstraping
             learning_rate: Float or a function that returns a float
                            when called with the current time step as input
                            (see gymmeforce.utils.linear_decay as an example)
@@ -119,15 +120,16 @@ class DQNAgent(BaseAgent):
         state = env.reset()
 
         # Create training ops
-        self.model.create_training_ops(gamma, clip_norm, target_soft_update)
+        self.model.create_training_ops(gamma, clip_norm, n_step, target_soft_update)
         # Create Session
         self._maybe_create_tf_sess()
 
         # Create replay buffer
         if self.replay_buffer is None:
             self.replay_buffer = ReplayBuffer(int(replay_buffer_size),
-                                              self.history_length,
-                                              batch_size)
+                                              history_length=self.history_length,
+                                              batch_size=batch_size,
+                                              n_step=n_step)
             # Populate replay buffer with random agent
             num_init_replays = replay_buffer_size * init_buffer_size
             for i in range(int(num_init_replays)):
@@ -150,6 +152,7 @@ class DQNAgent(BaseAgent):
         reward_sum = 0
         rewards = []
         start_time = time.time()
+        # TODO: soft updating here, need to hard copy weights
         self.model.update_target_net(self.sess)
         for i_step in range(1, int(num_steps) + 1):
             epsilon = exploration_schedule(i_step)
@@ -171,6 +174,8 @@ class DQNAgent(BaseAgent):
             if i_step % learning_freq == 0:
                 # Sample replay buffer
                 b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample()
+                # Calculate n_step rewards
+                b_r = [discounted_sum_rewards_final_sum(r) for r in b_r]
                 # Calculate learning rate
                 if callable(learning_rate):
                     lr = learning_rate(i_step)

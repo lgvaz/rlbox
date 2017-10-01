@@ -36,7 +36,7 @@ class DQNModel(BaseModel):
         tf.add_to_collection('state_input', self.states_t_ph)
         tf.add_to_collection('q_online_t', self.q_online_t)
 
-    def _build_optimization(self, clip_norm, gamma):
+    def _build_optimization(self, clip_norm, gamma, n_step):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.actions_ph, self.num_actions)
         q_t = tf.reduce_sum(tf.multiply(self.q_online_t, onehot_actions), axis=1)
@@ -47,7 +47,7 @@ class DQNModel(BaseModel):
             q_tp1 = tf.reduce_sum(tf.multiply(self.q_target_tp1, best_actions_onehot), axis=1)
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)
-        td_target = self.rewards_ph + (1 - self.dones_ph) * gamma * q_tp1
+        td_target = self.rewards_ph + (1 - self.dones_ph) * (gamma ** n_step) * q_tp1
         errors = tf.losses.huber_loss(labels=td_target, predictions=q_t)
         self.total_error = tf.reduce_mean(errors)
 
@@ -84,9 +84,9 @@ class DQNModel(BaseModel):
 
         return merged
 
-    def create_training_ops(self, gamma, clip_norm, target_soft_update):
+    def create_training_ops(self, gamma, clip_norm, n_step, target_soft_update):
         # Create training operations
-        self.training_op = self._build_optimization(clip_norm, gamma)
+        self.training_op = self._build_optimization(clip_norm, gamma, n_step)
         self.update_target_op = self._build_target_update_op(target_soft_update)
 
     def predict(self, sess, states):

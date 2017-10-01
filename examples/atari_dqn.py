@@ -5,7 +5,7 @@ from gymmeforce.common.utils import piecewise_linear_decay
 
 
 # Create gym enviroment
-env_name = 'SpaceInvadersNoFrameskip-v4'
+env_name = 'PongNoFrameskip-v4'
 
 # Define learning rate and exploration schedule
 num_steps = 40e6
@@ -18,14 +18,15 @@ exploration_schedule = piecewise_linear_decay(boundaries=[1e6, 0.5 * num_steps],
 
 # Create agent
 agent = DQNAgent(env_name=env_name,
-                 log_dir='logs/space_invaders/dueling_ddqn_v0_1',
+                 log_dir='logs/pong/ddqn_v0_0',
                  double=True,
-                 dueling=True,
+                 dueling=False,
                  env_wrapper=wrap_deepmind)
 # Train
 agent.train(num_steps=num_steps,
+            n_step=4,
             learning_rate=learning_rate_schedule,
             exploration_schedule=exploration_schedule,
             replay_buffer_size=1e6,
-            target_update_freq=30000,
+            target_update_freq=10000,
             log_steps=4e4)
