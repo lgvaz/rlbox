@@ -18,7 +18,7 @@ exploration_schedule = piecewise_linear_decay(boundaries=[1e6, 0.5 * num_steps],
 
 # Create agent
 agent = DQNAgent(env_name=env_name,
-                 log_dir='logs/space_invaders/dueling_ddqn_v0',
+                 log_dir='logs/space_invaders/dueling_ddqn_v0_1',
                  double=True,
                  dueling=True,
                  env_wrapper=wrap_deepmind)
@@ -27,4 +27,5 @@ agent.train(num_steps=num_steps,
             learning_rate=learning_rate_schedule,
             exploration_schedule=exploration_schedule,
             replay_buffer_size=1e6,
-            target_update_freq=30000)
+            target_update_freq=30000,
+            log_steps=4e4)
