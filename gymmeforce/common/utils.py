@@ -1,8 +1,9 @@
 import os
 import random
 import numpy as np
-from collections import deque
 import tensorflow as tf
+from collections import deque
+from scipy.signal import lfilter
 
 
 class RingBuffer:
@@ -200,19 +201,4 @@ def egreedy_police(Q_values, epsilon):
 
 
 def discounted_sum_rewards(rewards, gamma=0.99):
-    reward_sum = 0
-    discounted_rewards = []
-
-    for reward in reversed(rewards):
-        reward_sum = reward + gamma * reward_sum
-        discounted_rewards.append(reward_sum)
-
-    return discounted_rewards[::-1]
-
-def discounted_sum_rewards_final_sum(rewards, gamma=0.99):
-    reward_sum = 0
-
-    for reward in reversed(rewards):
-        reward_sum = reward + gamma * reward_sum
-
-    return reward_sum
+    return lfilter([1.0], [1.0, -gamma], rewards[::-1])[::-1]
