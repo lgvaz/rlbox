@@ -2,7 +2,7 @@ import time
 from datetime import timedelta
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import discounted_sum_rewards
+from gymmeforce.common.utils import discounted_sum_rewards_final_sum
 from gymmeforce.common.utils import ReplayBuffer, RingBuffer
 from gymmeforce.models import DQNModel
 from gymmeforce.agents.base_agent import BaseAgent
@@ -172,10 +172,12 @@ class DQNAgent(BaseAgent):
 
             # Perform gradient descent
             if i_step % learning_freq == 0:
-                # Sample replay buffer
+                # Get batch to train on
                 b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample()
-                # Calculate n_step rewards
-                b_r = [discounted_sum_rewards(r)[0] for r in b_r]
+                if n_step > 1:
+                    # Calculate n_step rewards
+                    b_r = [discounted_sum_rewards_final_sum(r, d) for r, d in zip(b_r, b_d)]
+                    b_d = np.any(b_d, axis=1)
                 # Calculate learning rate
                 if callable(learning_rate):
                     lr = learning_rate(i_step)

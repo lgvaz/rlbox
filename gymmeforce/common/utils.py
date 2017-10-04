@@ -53,6 +53,7 @@ class ReplayBuffer:
         self.current_idx = 0
         self.current_len = 0
 
+
     def add(self, state, action, reward, done):
         if not self.initialized:
             self.initialized = True
@@ -63,6 +64,12 @@ class ReplayBuffer:
             self.actions = np.empty(self.maxlen, dtype=np.int32)
             self.rewards = np.empty(self.maxlen, dtype=np.float32)
             self.dones = np.empty(self.maxlen, dtype=np.bool)
+
+            # Function for selecting multiple slices
+            self.states_stride_history = strided_axis0(self.states, self.history_length)
+            if self.n_step > 1:
+                self.rewards_stride_nstep = strided_axis0(self.rewards, self.n_step)
+                self.dones_stride_nstep = strided_axis0(self.dones, self.n_step)
 
         # Store transition
         self.states[self.current_idx] = np.squeeze(state)
@@ -77,22 +84,23 @@ class ReplayBuffer:
     def sample(self):
         start_idxs, end_idxs = self._generate_idxs()
         # Get states
-        b_states_t = np.array([self.states[start_idx : end_idx] for
-                              start_idx, end_idx in zip(start_idxs, end_idxs)],
-                              copy=False)
-        b_states_tp1 = np.array([self.states[start_idx + self.n_step : end_idx + self.n_step]
-                                for start_idx, end_idx in zip(start_idxs, end_idxs)],
-                                copy=False)
-        rewards = np.array([self.rewards[end_idx - 1 : end_idx + self.n_step - 1]
-                            for end_idx in end_idxs], copy=False)
+        b_states_t = self.states_stride_history[start_idxs]
+        b_states_tp1 = self.states_stride_history[start_idxs + self.n_step]
+
+        if self.n_step > 1:
+            rewards = self.rewards_stride_nstep[end_idxs - 1]
+            dones = self.dones_stride_nstep[end_idxs - 1]
+        else:
+            rewards = self.rewards[end_idxs - 1]
+            dones = self.dones[end_idxs - 1]
         # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
-        dones = self.dones[end_idxs - 1]
 
         return (b_states_t.swapaxes(1, -1),
                 b_states_tp1.swapaxes(1, -1),
                 actions, rewards, dones)
 
+    # TODO: this is too slow
     def _generate_idxs(self):
         start_idxs = []
         end_idxs = []
@@ -109,15 +117,30 @@ class ReplayBuffer:
             # Check if state contains frames only from a single episode
             if np.any(self.dones[start_idx : end_idx - 1]):
                 continue
-            # Check if next_state contains frames only from a single episode
-            if np.any(self.dones[end_idx : end_idx + self.n_step - 1]):
-                continue
 
             # Valid idx!!
             start_idxs.append(start_idx)
             end_idxs.append(end_idx)
 
         return np.array(start_idxs), np.array(end_idxs)
+
+
+def strided_axis0(a, L):
+    '''
+    https://stackoverflow.com/questions/43413582/selecting-multiple-slices-from-a-numpy-array-at-once/43413801#43413801
+    '''
+    # Store the shape and strides info
+    shp = a.shape
+    s  = a.strides
+
+    # Compute length of output array along the first axis
+    nd0 = shp[0]-L+1
+
+    # Setup shape and strides for use with np.lib.stride_tricks.as_strided
+    # and get (n+1) dim output array
+    shp_in = (nd0,L)+shp[1:]
+    strd_in = (s[0],) + s
+    return np.lib.stride_tricks.as_strided(a, shape=shp_in, strides=strd_in)
 
 
 def load_q_func(sess, log_dir):
@@ -202,3 +225,14 @@ def egreedy_police(Q_values, epsilon):
 
 def discounted_sum_rewards(rewards, gamma=0.99):
     return lfilter([1.0], [1.0, -gamma], rewards[::-1])[::-1]
+
+
+def discounted_sum_rewards_final_sum(rewards, dones, gamma=0.99):
+    reward_sum = 0
+
+    for reward, done in zip(reversed(rewards), reversed(dones)):
+        if done:
+            reward_sum = 0
+        reward_sum = reward + gamma * reward_sum
+
+    return reward_sum
