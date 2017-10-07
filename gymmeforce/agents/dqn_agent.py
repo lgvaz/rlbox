@@ -16,8 +16,8 @@ class DQNAgent(BaseAgent):
 
         # Create underlying model
         self.model = DQNModel(self.state_shape + (history_length,),
-                              self.num_actions, graph=graph, double=double,
-                              dueling=dueling, log_dir=log_dir)
+                              self.num_actions, graph=graph, input_type=input_type,
+                              double=double, dueling=dueling, log_dir=log_dir)
         self.history_length = history_length
         self.replay_buffer = None
 
