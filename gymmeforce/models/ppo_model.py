@@ -4,6 +4,7 @@ from sklearn.utils import shuffle
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.models.value_graphs import dense_value_graph
 from gymmeforce.models.base_model import BaseModel
+from gymmeforce.common.distributions import CategoricalDist
 
 class PPOModel(BaseModel):
     def __init__(self, env_config, policy_graph=None, value_graph=None,
@@ -16,7 +17,8 @@ class PPOModel(BaseModel):
             value_graph = dense_value_graph
 
         self._create_placeholders()
-        self.returns_mean, self.returns_std = tf.nn.moments(self.returns_ph, axes=[0])
+        self.returns_mean, returns_var = tf.nn.moments(self.returns_ph, axes=[0])
+        self.returns_std = returns_var ** 0.5
         self._build_value_graph(value_graph)
         self._build_policy_graph(policy_graph)
 
@@ -30,14 +32,10 @@ class PPOModel(BaseModel):
     def _build_policy_graph(self, policy_graph):
         if self.env_config['action_space'] == 'discrete':
             # Create graph
-            self.logits = policy_graph(self.states_t_ph, self.env_config)
-            # Sample action
-            self.sample_action = tf.squeeze(tf.multinomial(self.logits,
-                                                           tf.shape(self.states_t_ph)[0]))
-            # Calculate log probabilities
-            one_hot_actions = tf.one_hot(self.actions_ph, self.env_config['num_actions'])
-            logprob = tf.nn.log_softmax(self.logits)
-            logprob = tf.reduce_sum(one_hot_actions * logprob, axis=1)
+            logits = policy_graph(self.states_t_ph, self.env_config)
+            self.policy = CategoricalDist(logits)
+            self.sample_action = self.policy.sample(tf.shape(self.states_t_ph)[0])
+            logprob = self.policy.logprob(self.actions_ph)
 
         if self.env_config['action_space'] == 'continuous':
             # Create graph
@@ -55,20 +53,22 @@ class PPOModel(BaseModel):
 
         # Rescale baseline for same mean and variance of returns
         baseline = self.state_value
-        # baseline_mean, baseline_std = tf.nn.moments(baseline, axes=[0])
-        # normalized_baseline = (baseline - baseline_mean) / (baseline_std + 1e-7)
-        # rescaled_baseline = normalized_baseline * self.returns_std + self.returns_mean
-        # advantages = self.returns_ph - rescaled_baseline
-        advantages = self.returns_ph - baseline
+        baseline_mean, baseline_var = tf.nn.moments(baseline, axes=[0])
+        baseline_std = baseline_var ** 0.5
+        normalized_baseline = (baseline - baseline_mean) / (baseline_std + 1e-7)
+        rescaled_baseline = normalized_baseline * self.returns_std + self.returns_mean
+        advantages = self.returns_ph - rescaled_baseline
+        # advantages = self.returns_ph - baseline
         self.policy_loss = -tf.reduce_sum(logprob * advantages)
 
         self.policy_update = tf.train.AdamOptimizer(self.policy_lr_ph).minimize(self.policy_loss)
 
     def _build_value_graph(self, value_graph):
-        self.state_value = value_graph(self.states_t_ph)
+        self.state_value = value_graph(self.states_t_ph, activation_fn=tf.nn.tanh)
         # Normalize target
-        # target = (self.returns_ph - self.returns_mean) / (self.returns_std + 1e-7)
-        self.vf_loss = tf.losses.mean_squared_error(labels=self.returns_ph,
+        target = (self.returns_ph - self.returns_mean) / (self.returns_std + 1e-7)
+        # target = self.state_value
+        self.vf_loss = tf.losses.mean_squared_error(labels=target,
                                                     predictions=self.state_value)
         self.value_fn_update = tf.train.AdamOptimizer(self.vf_lr_ph).minimize(self.vf_loss)
 
