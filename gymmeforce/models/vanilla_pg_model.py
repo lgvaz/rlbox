@@ -67,10 +67,11 @@ class VanillaPGModel(BaseModel):
         if self.env_config['action_space'] == 'discrete':
             logits = policy_graph(states_ph, self.env_config, scope=scope, reuse=reuse)
 
-            policy = namedtuple('Policy', 'dist sample_action logprob')
+            policy = namedtuple('Policy', 'dist sample_action logprob entropy')
             policy.dist = CategoricalDist(logits)
             policy.sample_action = policy.dist.sample(tf.shape(states_ph)[0])
-            policy.logprob = policy.dist.logprob(actions_ph)
+            policy.logprob = policy.dist.selected_logprob(actions_ph)
+            policy.entropy = policy.dist.entropy()
 
             return policy
 
@@ -78,12 +79,13 @@ class VanillaPGModel(BaseModel):
             # Create graph
             mean, logstd = policy_graph(states_ph, self.env_config, scope=scope, reuse=reuse)
 
-            policy = namedtuple('Policy', 'dist sample_action logprob')
+            policy = namedtuple('Policy', 'dist sample_action logprob entropy')
             policy.dist = DiagGaussianDist(mean, logstd,
                                            low_bound=self.env_config['action_low_bound'],
                                            high_bound=self.env_config['action_high_bound'])
             policy.sample_action = policy.dist.sample()
             policy.logprob = policy.dist.logprob(actions_ph)
+            policy.entropy = policy.dist.entropy()
 
             return policy
 
@@ -135,4 +137,8 @@ class VanillaPGModel(BaseModel):
                     self.placeholders['policy_lr']: policy_learning_rate
                 }
 
-                sess.run([self.policy_update, self.value_fn_update], feed_dict=feed_dict)
+                entropy = sess.run([self.policy.entropy,
+                                    self.policy_update,
+                                    self.value_fn_update],
+                                   feed_dict=feed_dict)[0]
+                print('entropy', entropy)
