@@ -5,7 +5,7 @@ from collections import namedtuple
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.models.value_graphs import dense_value_graph
 from gymmeforce.models.base_model import BaseModel
-from gymmeforce.common.distributions import CategoricalDist
+from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
 
 class VanillaPGModel(BaseModel):
     def __init__(self, env_config, normalize_baseline=True,
@@ -68,17 +68,16 @@ class VanillaPGModel(BaseModel):
 
         if self.env_config['action_space'] == 'continuous':
             # Create graph
-            self.mean, self.logstd = policy_graph(self.states_t_ph, self.env_config)
-            self.std = tf.exp(self.logstd)
-            # Sample action
-            self.sample_action = self.mean + self.std * tf.random_normal(tf.shape(self.mean))
-            self.sample_action = tf.clip_by_value(self.sample_action,
-                                                  self.env_config['action_low_bound'],
-                                                  self.env_config['action_high_bound'])
-            # Calculate log probabilities
-            logprob = -0.5 * tf.reduce_sum(self.logstd)
-            logprob += -0.5 * tf.reduce_sum(((self.actions_ph - self.mean)
-                                             / self.std) ** 2, axis=1)
+            mean, logstd = policy_graph(self.states_t_ph, self.env_config)
+
+            policy = namedtuple('Policy', 'dist sample_action logprob')
+            policy.dist = DiagGaussianDist(mean, logstd,
+                                           low_bound=self.env_config['action_low_bound'],
+                                           high_bound=self.env_config['action_high_bound'])
+            policy.sample_action = policy.dist.sample()
+            policy.logprob = policy.dist.logprob(self.actions_ph)
+
+            return policy
 
     def _normalize_baseline(self):
         # Normalize target values for baseline
