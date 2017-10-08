@@ -17,15 +17,30 @@ class VanillaPGModel(BaseModel):
         if value_graph == None:
             value_graph = dense_value_graph
 
-        self._create_placeholders()
-        self.value_fn = self._create_value_fn(value_graph)
-        self.policy = self._create_policy(self.states_t_ph, self.actions_ph, policy_graph)
-        self.vf_target = self.returns_ph
+        placeholders_config = {
+            'states': [[None] + list(env_config['state_shape']), env_config['input_type']],
+            'returns': [[None], tf.float32],
+            'value_fn_lr': [[], tf.float32],
+            'policy_lr': [[], tf.float32]
+        }
+        if env_config['action_space'] == 'discrete':
+            placeholders_config['actions'] = [[None], tf.int32]
+        if env_config['action_space'] == 'continuous':
+            placeholders_config['actions'] = [[None, env_config['num_actions']], tf.float32]
+
+        self._create_placeholders(placeholders_config)
+        self.value_fn = self._create_value_fn(self.placeholders['states'],
+                                              value_graph)
+        self.policy = self._create_policy(self.placeholders['states'],
+                                          self.placeholders['actions'],
+                                          policy_graph)
+        self.vf_target = self.placeholders['returns']
         self.baseline = self.value_fn.state_value
         if normalize_baseline:
             self._normalize_baseline()
-        self.value_fn_update = self._create_value_fn_training_op(self.vf_lr_ph)
-        self.policy_update = self._create_policy_training_op(self.policy, self.policy_lr_ph)
+        self.value_fn_update = self._create_value_fn_training_op(self.placeholders['value_fn_lr'])
+        self.policy_update = self._create_policy_training_op(self.policy,
+                                                             self.placeholders['policy_lr'])
 
     def _create_policy_training_op(self, policy, learning_rate):
         '''
@@ -36,19 +51,12 @@ class VanillaPGModel(BaseModel):
         return training_op
 
     def _pg_loss(self, policy):
-        advantages = self.returns_ph - self.baseline
+        advantages = self.placeholders['returns'] - self.baseline
         pg_loss = -tf.reduce_sum(policy.logprob * advantages)
         return pg_loss
 
-    def _create_placeholders(self):
-        self.vf_target_ph = tf.placeholder(name='vf_target', shape=[None], dtype=tf.float32)
-        # self.advantage_ph = tf.placeholder(name='advantage', shape=[None], dtype=tf.float32)
-        self.returns_ph = tf.placeholder(name='returns', shape=[None], dtype=tf.float32)
-        self.vf_lr_ph = tf.placeholder(name='vf_lr', shape=[], dtype=tf.float32)
-        self.policy_lr_ph = tf.placeholder(name='policy_lr', shape=[], dtype=tf.float32)
-
-    def _create_value_fn(self, value_graph):
-        state_value = value_graph(self.states_t_ph, activation_fn=tf.nn.tanh)
+    def _create_value_fn(self, states_ph, value_graph):
+        state_value = value_graph(states_ph, activation_fn=tf.nn.tanh)
 
         baseline = namedtuple('Value_fn', 'state_value')
         baseline.state_value = state_value
@@ -57,7 +65,7 @@ class VanillaPGModel(BaseModel):
 
     def _create_policy(self, states_ph, actions_ph, policy_graph, scope='policy', reuse=None):
         if self.env_config['action_space'] == 'discrete':
-            logits = policy_graph(states_ph, self.env_config, scope=scope, reuse=None)
+            logits = policy_graph(states_ph, self.env_config, scope=scope, reuse=reuse)
 
             policy = namedtuple('Policy', 'dist sample_action logprob')
             policy.dist = CategoricalDist(logits)
@@ -68,22 +76,22 @@ class VanillaPGModel(BaseModel):
 
         if self.env_config['action_space'] == 'continuous':
             # Create graph
-            mean, logstd = policy_graph(self.states_t_ph, self.env_config)
+            mean, logstd = policy_graph(states_ph, self.env_config, scope=scope, reuse=reuse)
 
             policy = namedtuple('Policy', 'dist sample_action logprob')
             policy.dist = DiagGaussianDist(mean, logstd,
                                            low_bound=self.env_config['action_low_bound'],
                                            high_bound=self.env_config['action_high_bound'])
             policy.sample_action = policy.dist.sample()
-            policy.logprob = policy.dist.logprob(self.actions_ph)
+            policy.logprob = policy.dist.logprob(actions_ph)
 
             return policy
 
     def _normalize_baseline(self):
         # Normalize target values for baseline
-        returns_mean, returns_var = tf.nn.moments(self.returns_ph, axes=[0])
+        returns_mean, returns_var = tf.nn.moments(self.placeholders['returns'], axes=[0])
         returns_std = returns_var ** 0.5
-        self.vf_target = (self.returns_ph - returns_mean) / (returns_std + 1e-7)
+        self.vf_target = (self.placeholders['returns'] - returns_mean) / (returns_std + 1e-7)
 
         # Rescale baseline for same mean and variance of returns
         baseline_mean, baseline_var = tf.nn.moments(self.baseline, axes=[0])
@@ -99,10 +107,10 @@ class VanillaPGModel(BaseModel):
 
     def select_action(self, sess, state):
         return sess.run(self.policy.sample_action,
-                        feed_dict={self.states_t_ph: state[np.newaxis]})
+                        feed_dict={self.placeholders['states']: state[np.newaxis]})
 
     def predict_states_value(self, sess, states):
-        return sess.run(self.value_fn.state_value, feed_dict={self.states_t_ph: states})
+        return sess.run(self.value_fn.state_value, feed_dict={self.placeholders['states']: states})
 
     def train(self, sess, states, actions, returns, policy_learning_rate, vf_learning_rate,
                     num_epochs=10, batch_size=64):
@@ -117,16 +125,14 @@ class VanillaPGModel(BaseModel):
                 end = (i_batch + 1) * batch_size
                 states_batch = states[start : end]
                 actions_batch = actions[start : end]
-                # vf_targets_batch = vf_targets[start : end]
                 returns_batch = returns[start : end]
 
                 feed_dict = {
-                    self.states_t_ph: states_batch,
-                    self.actions_ph: actions_batch,
-                    # self.vf_target_ph: vf_targets_batch,
-                    self.returns_ph: returns_batch,
-                    self.vf_lr_ph: vf_learning_rate,
-                    self.policy_lr_ph: policy_learning_rate,
+                    self.placeholders['states']: states_batch,
+                    self.placeholders['actions']: actions_batch,
+                    self.placeholders['returns']: returns_batch,
+                    self.placeholders['value_fn_lr']: vf_learning_rate,
+                    self.placeholders['policy_lr']: policy_learning_rate
                 }
 
                 sess.run([self.policy_update, self.value_fn_update], feed_dict=feed_dict)
