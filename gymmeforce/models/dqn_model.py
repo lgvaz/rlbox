@@ -38,12 +38,12 @@ class DQNModel(BaseModel):
 
     def _build_optimization(self, clip_norm, gamma, n_step):
         # Choose only the q values for selected actions
-        onehot_actions = tf.one_hot(self.actions_ph, self.num_actions)
+        onehot_actions = tf.one_hot(self.actions_ph, self.env_config['num_actions'])
         q_t = tf.reduce_sum(tf.multiply(self.q_online_t, onehot_actions), axis=1)
 
         # Caculate td_target
         if self.double:
-            best_actions_onehot = tf.one_hot(tf.argmax(self.q_online_tp1, axis=1), self.num_actions)
+            best_actions_onehot = tf.one_hot(tf.argmax(self.q_online_tp1, axis=1), self.env_config['num_actions'])
             q_tp1 = tf.reduce_sum(tf.multiply(self.q_target_tp1, best_actions_onehot), axis=1)
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)

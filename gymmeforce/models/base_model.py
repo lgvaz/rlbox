@@ -6,38 +6,37 @@ from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 # TODO: Global steps
 class BaseModel:
-    def __init__(self, state_shape, num_actions, input_type=None, log_dir=None):
-        self.state_shape = state_shape
-        self.num_actions = num_actions
+    def __init__(self, env_config, log_dir=None):
+        self.env_config = env_config
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
         self.log_dir = log_dir
         self.merged = None
         self._saver = None
         self._writer = None
 
-        # If input is an image defaults to uint8, else defaults to float32
-        if input_type is None:
-            if len(state_shape) == 3:
-                input_type = tf.uint8
-            else:
-                input_type = tf.float32
-
         # Model inputs
         self.states_t_ph = tf.placeholder(
             name='states',
-            shape=[None] + list(self.state_shape),
-            dtype=input_type
+            shape=[None] + list(self.env_config['state_shape']),
+            dtype=env_config['input_type']
         )
         self.states_tp1_ph = tf.placeholder(
             name='states_tp1',
-            shape=[None] + list(self.state_shape),
-            dtype=input_type
+            shape=[None] + list(self.env_config['state_shape']),
+            dtype=env_config['input_type']
         )
-        self.actions_ph = tf.placeholder(
-            name='actions',
-            shape=[None],
-            dtype=tf.int32
-        )
+        if env_config['action_space'] == 'discrete':
+            self.actions_ph = tf.placeholder(
+                name='actions',
+                shape=[None],
+                dtype=tf.int32
+            )
+        if env_config['action_space'] == 'continuous':
+            self.actions_ph = tf.placeholder(
+                name='actions',
+                shape=[None, self.env_config['num_actions']],
+                dtype=tf.float32
+            )
         self.rewards_ph = tf.placeholder(
             name='rewards',
             shape=[None],
@@ -59,7 +58,7 @@ class BaseModel:
             dtype=tf.int32
         )
 
-        if input_type == tf.uint8:
+        if self.env_config['input_type'] == tf.uint8:
             # Convert to float on GPU
             self.states_t = tf.cast(self.states_t_ph, tf.float32) / 255.
             self.states_tp1 = tf.cast(self.states_tp1_ph, tf.float32) / 255.

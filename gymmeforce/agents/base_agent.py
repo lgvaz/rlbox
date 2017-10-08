@@ -13,20 +13,36 @@ class BaseAgent:
         self.env_name = env_name
         self.log_dir = log_dir
         self.env_wrapper = env_wrapper
+        self.model = None
+        self.sess = None
+        self.env_config = {
+            'env_name': env_name,
+            'env_wrapper': env_wrapper
+        }
 
-        # Get env information
         env = gym.make(env_name)
         # Adds additional wrappers
         if env_wrapper is not None:
             env = env_wrapper(env)
 
+        # Get env information
         state = env.reset()
-        self.state_shape = np.squeeze(state).shape
-        self.num_actions = env.action_space.n
+        self.env_config['state_shape'] = np.squeeze(state).shape
         env.close()
-
-        self.model = None
-        self.sess = None
+        # Discrete or continuous actions?
+        if isinstance(env.action_space, gym.spaces.Discrete):
+            self.env_config['action_space'] = 'discrete'
+            self.env_config['num_actions'] = env.action_space.n
+        else:
+            self.env_config['action_space'] = 'continuous'
+            self.env_config['num_actions'] = env.action_space.shape[0]
+            self.env_config['action_low_bound'] = env.action_space.low
+            self.env_config['action_high_bound'] = env.action_space.high
+        # If input is an image defaults to uint8, else defaults to float32
+        if len(self.env_config['state_shape']) == 3:
+            self.env_config['input_type'] = tf.uint8
+        else:
+            self.env_config['input_type'] = tf.float32
 
     def _create_env(self, monitor_dir, record_steps=False):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
@@ -43,7 +59,6 @@ class BaseAgent:
             env = monitored_env
 
         return monitored_env, env
-
 
     def _maybe_create_tf_sess(self):
         '''
