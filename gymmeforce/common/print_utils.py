@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from collections import defaultdict
 
@@ -5,16 +6,26 @@ from collections import defaultdict
 class Logger:
     def __init__(self):
         self.logs = defaultdict(list)
+        self.precision = dict()
+        self.time = time.time()
 
-    def add_log(self, name, value):
+    def add_log(self, name, value, precision=2):
         self.logs[name].append(value)
+        self.precision[name] = precision
 
     def log(self, header=None):
         ''' Write the mean of the values added to each key and clear previous values '''
-        avg_dict = dict((key, '{:.4f}'.format(np.mean(value)))
-                        for key, value in self.logs.items())
+        avg_dict = {key: '{:.{prec}f}'.format(np.mean(value), prec=self.precision[key])
+                    for key, value in self.logs.items()}
         self.logs = defaultdict(list)
         print_table(avg_dict, header)
+
+    def timeit(self, steps):
+        new_time = time.time()
+        steps_sec = steps / (new_time - self.time)
+        self.add_log('Steps/Second', steps_sec)
+        self.time = new_time
+
 
 def print_table(tags_and_values_dict, header=None, width=42):
     '''

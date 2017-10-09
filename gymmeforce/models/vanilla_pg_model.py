@@ -144,3 +144,6 @@ class VanillaPGModel(BaseModel):
 
                 if logger:
                     logger.add_log('Entropy', entropy)
+        if logger:
+            logger.add_log('Policy Learning Rate', policy_learning_rate, precision=5)
+            logger.add_log('Baseline Learning Rate', vf_learning_rate, precision=5)
