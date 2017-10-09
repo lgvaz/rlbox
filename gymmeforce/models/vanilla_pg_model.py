@@ -115,7 +115,7 @@ class VanillaPGModel(BaseModel):
         return sess.run(self.value_fn.state_value, feed_dict={self.placeholders['states']: states})
 
     def train(self, sess, states, actions, returns, policy_learning_rate, vf_learning_rate,
-                    num_epochs=10, batch_size=64):
+                    num_epochs=10, batch_size=64, logger=None):
         # Split data into multiple batches and train on multiple epochs
         num_batches = max(np.shape(states)[0] // batch_size, 1)
         batch_size = np.shape(states)[0] // num_batches
@@ -141,4 +141,6 @@ class VanillaPGModel(BaseModel):
                                     self.policy_update,
                                     self.value_fn_update],
                                    feed_dict=feed_dict)[0]
-                print('entropy', entropy)
+
+                if logger:
+                    logger.add_log('Entropy', entropy)

@@ -26,7 +26,7 @@ class VanillaPGAgent(BatchAgent):
         # env._max_episode_steps = 2000
         # monitored_env, env = self._create_env(os.path.join(self.log_dir, 'videos/train'))
 
-        for _ in range(50):
+        for i_iter in range(20):
             # Generate policy rollouts
             trajectories = self.generate_batch(env, 1000)
             states = np.concatenate([trajectory['states'] for trajectory in trajectories])
@@ -35,7 +35,9 @@ class VanillaPGAgent(BatchAgent):
             # Train
             # returns = (returns - np.mean(returns)) / (np.std(returns) + 1e-7)
             self.model.train(self.sess, states, actions, returns,
-                             policy_learning_rate=1e-4, vf_learning_rate=5e-3, num_epochs=10)
+                             policy_learning_rate=1e-4, vf_learning_rate=5e-3, num_epochs=10, logger=self.logger)
 
             # print(np.mean(monitored_env.get_episode_rewards()[-200:]))
-            print(np.sum(np.concatenate([traj['rewards'] for traj in trajectories])) / len(trajectories))
+            mean_rewards = (np.sum(np.concatenate([traj['rewards'] for traj in trajectories])) / len(trajectories))
+            self.logger.add_log('Rewards', mean_rewards)
+            self.logger.log('Iteration {}'.format(i_iter))

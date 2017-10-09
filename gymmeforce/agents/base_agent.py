@@ -3,6 +3,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 from gym import wrappers
+from gymmeforce.common.print_utils import Logger
 
 
 # TODO: Maybe wrap env outside of class??
@@ -15,6 +16,7 @@ class BaseAgent:
         self.env_wrapper = env_wrapper
         self.model = None
         self.sess = None
+        self.logger = Logger()
         self.env_config = {
             'env_name': env_name,
             'env_wrapper': env_wrapper
@@ -39,6 +41,7 @@ class BaseAgent:
             self.env_config['action_low_bound'] = env.action_space.low
             self.env_config['action_high_bound'] = env.action_space.high
         # If input is an image defaults to uint8, else defaults to float32
+        # TODO: Change this? Only for DQN?
         if len(self.env_config['state_shape']) == 3:
             self.env_config['input_type'] = tf.uint8
         else:
