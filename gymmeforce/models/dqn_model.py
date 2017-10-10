@@ -21,6 +21,15 @@ class DQNModel(BaseModel):
         else:
             print('Using custom graph')
 
+        #TODO: FIX THIS
+        # if self.env_config['input_type'] == tf.uint8:
+        #     # Convert to float on GPU
+        #     self.states_t = tf.cast(self.states_t_ph, tf.float32) / 255.
+        #     self.states_tp1 = tf.cast(self.states_tp1_ph, tf.float32) / 255.
+        # else:
+        #     self.states_t = self.states_t_ph
+        #     self.states_tp1 = self.states_tp1_ph
+
         # Create graphs
         self.q_online_t = graph(self.states_t, num_actions, 'online', dueling=dueling)
         self.q_target_tp1 = graph(self.states_tp1, num_actions, 'target', dueling=dueling)

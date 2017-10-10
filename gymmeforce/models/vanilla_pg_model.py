@@ -20,6 +20,8 @@ class VanillaPGModel(BaseModel):
         placeholders_config = {
             'states': [[None] + list(env_config['state_shape']), env_config['input_type']],
             'returns': [[None], tf.float32],
+            'baseline': [[None], tf.float32],
+            'advantages': [[None], tf.float32],
             'value_fn_lr': [[], tf.float32],
             'policy_lr': [[], tf.float32]
         }
@@ -35,7 +37,7 @@ class VanillaPGModel(BaseModel):
                                           self.placeholders['actions'],
                                           policy_graph)
         self.vf_target = self.placeholders['returns']
-        self.baseline = self.value_fn.state_value
+        self.baseline = self.placeholders['baseline']
         if normalize_baseline:
             self._normalize_baseline()
         self.value_fn_update = self._create_value_fn_training_op(self.placeholders['value_fn_lr'])
@@ -47,12 +49,19 @@ class VanillaPGModel(BaseModel):
         This method should be changed to add new losses (e.g. KL penalty)
         '''
         pg_loss = self._pg_loss(policy)
-        training_op = tf.train.AdamOptimizer(learning_rate).minimize(pg_loss)
+        self.pg_loss = pg_loss
+        training_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(pg_loss)
         return training_op
 
     def _pg_loss(self, policy):
         advantages = self.placeholders['returns'] - self.baseline
-        pg_loss = -tf.reduce_sum(policy.logprob * advantages)
+        # # Normalize advantages
+        # advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
+        # advs_std = advs_var ** 0.5
+        # norm_advantages = (advantages - advs_mean) / (advs_std + 1e-7)
+
+        pg_loss = -tf.reduce_mean(policy.logprob * self.placeholders['advantages'])
+
         return pg_loss
 
     def _create_value_fn(self, states_ph, value_graph):
@@ -114,36 +123,59 @@ class VanillaPGModel(BaseModel):
     def predict_states_value(self, sess, states):
         return sess.run(self.value_fn.state_value, feed_dict={self.placeholders['states']: states})
 
+    # TODO: Compute adv and then fit policy
     def train(self, sess, states, actions, returns, policy_learning_rate, vf_learning_rate,
                     num_epochs=10, batch_size=64, logger=None):
+        # Calculate baseline
+        feed_dict = {self.placeholders['states']: states}
+        baseline = sess.run(self.value_fn.state_value, feed_dict=feed_dict)
+        advs = returns - baseline
         # Split data into multiple batches and train on multiple epochs
         num_batches = max(np.shape(states)[0] // batch_size, 1)
         batch_size = np.shape(states)[0] // num_batches
 
+        mean_old, logstd_old, std_old, entropy_old = sess.run([self.policy.dist.mean, self.policy.dist.logstd, self.policy.dist.std, self.policy.entropy], feed_dict=feed_dict)
         for i_epoch in range(num_epochs):
-            states, actions, returns = shuffle(states, actions, returns)
+            states, actions, returns, baseline, advs = shuffle(states, actions, returns, baseline, advs)
             for i_batch in range(num_batches):
                 start = i_batch * batch_size
                 end = (i_batch + 1) * batch_size
                 states_batch = states[start : end]
                 actions_batch = actions[start : end]
                 returns_batch = returns[start : end]
+                baseline_batch = baseline[start : end]
+                advs_batch = advs[start : end]
 
                 feed_dict = {
                     self.placeholders['states']: states_batch,
                     self.placeholders['actions']: actions_batch,
                     self.placeholders['returns']: returns_batch,
+                    self.placeholders['baseline']: baseline_batch,
+                    self.placeholders['advantages']: advs_batch,
                     self.placeholders['value_fn_lr']: vf_learning_rate,
                     self.placeholders['policy_lr']: policy_learning_rate
                 }
 
-                entropy = sess.run([self.policy.entropy,
+                pg_loss = sess.run([self.pg_loss,
                                     self.policy_update,
                                     self.value_fn_update],
                                    feed_dict=feed_dict)[0]
+                logger.add_log('pg_loss', pg_loss)
 
-                if logger:
-                    logger.add_log('Entropy', entropy)
+        pg_loss, mean, logstd, std, entropy = sess.run([self.pg_loss, self.policy.dist.mean, self.policy.dist.logstd, self.policy.dist.std, self.policy.entropy], feed_dict=feed_dict)
+
+        if logger:
+            logger.add_log('returns', np.mean(returns))
+            logger.add_log('baseline', np.mean(baseline))
+            logger.add_log('adv', np.mean(advs))
+            logger.add_log('Entropy_old', entropy_old)
+            logger.add_log('Entropy', entropy)
+            logger.add_log('mean_old', np.mean(mean_old))
+            logger.add_log('mean', np.mean(mean))
+            logger.add_log('Logstd_old', logstd_old)
+            logger.add_log('Logstd', logstd)
+            logger.add_log('std_old', std_old)
+            logger.add_log('std', std)
         if logger:
             logger.add_log('Policy Learning Rate', policy_learning_rate, precision=5)
             logger.add_log('Baseline Learning Rate', vf_learning_rate, precision=5)

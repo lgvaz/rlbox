@@ -21,22 +21,23 @@ class VanillaPGAgent(BatchAgent):
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, max_iters=-1, max_episodes=-1, max_steps=-1):
+    def train(self, policy_learning_rate, vf_learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64):
         self._maybe_create_tf_sess()
         monitored_env, env = self._create_env(os.path.join(self.log_dir, 'videos/train'))
 
         i_step = 0
         for i_iter in itertools.count():
             # Generate policy rollouts
-            trajectories = self.generate_batch(env, 1000)
+            trajectories = self.generate_batch(env, timesteps_per_batch, gamma=rew_discount_factor)
             states = np.concatenate([trajectory['states'] for trajectory in trajectories])
             actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
             returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
 
             # Train
-            self.model.train(self.sess, states, actions, returns, policy_learning_rate=1e-4,
-                             vf_learning_rate=5e-3, num_epochs=10, logger=self.logger)
+            # policy_lr = policy_learning_rate(i_iter)
+            self.model.train(self.sess, states, actions, returns, policy_learning_rate,
+                             vf_learning_rate, num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
 
             # Logs
             ep_rewards = monitored_env.get_episode_rewards()
@@ -47,7 +48,7 @@ class VanillaPGAgent(BatchAgent):
             self.logger.add_log('Reward Mean [{} episodes]'.format(num_episodes),
                                 np.mean(ep_rewards[-num_episodes:]))
             self.logger.timeit(num_steps)
-            self.logger.log('Iter: {} | Episode: {} | Step: {}'.format(i_iter, i_episode, i_step))
+            self.logger.log('Iter {} | Episode {} | Step {}'.format(i_iter, i_episode, i_step))
 
             # Check for termination
             if (i_iter // max_iters >= 1
