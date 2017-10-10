@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import itertools
 from gymmeforce.agents import BatchAgent
-from gymmeforce.models import VanillaPGModel
+from gymmeforce.models.vanilla_pg_model2 import VanillaPGModel
 
 class VanillaPGAgent(BatchAgent):
     def __init__(self, env_name, log_dir, normalize_baseline=True,
@@ -12,10 +12,8 @@ class VanillaPGAgent(BatchAgent):
         super(VanillaPGAgent, self).__init__(env_name, log_dir, env_wrapper)
 
         self.model = VanillaPGModel(self.env_config,
-                                    normalize_baseline=normalize_baseline,
-                                    policy_graph=policy_graph,
-                                    value_graph=value_graph,
-                                    input_type=input_type,
+                                    # policy_graph=policy_graph,
+                                    # value_graph=value_graph,
                                     log_dir=log_dir)
 
     def select_action(self, state):
@@ -36,8 +34,9 @@ class VanillaPGAgent(BatchAgent):
 
             # Train
             # policy_lr = policy_learning_rate(i_iter)
-            self.model.train(self.sess, states, actions, returns, policy_learning_rate,
-                             vf_learning_rate, num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
+            # self.model.train(self.sess, states, actions, returns, policy_learning_rate,
+                             # vf_learning_rate, num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
+            self.model.fit(self.sess, states, actions, returns)
 
             # Logs
             ep_rewards = monitored_env.get_episode_rewards()

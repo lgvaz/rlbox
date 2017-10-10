@@ -16,4 +16,5 @@ class CategoricalDist:
         return selected_logprob
 
     def entropy(self):
-        return - tf.reduce_sum(tf.exp(self.logprob) * self.logprob)
+        return -(tf.reduce_sum(tf.exp(self.logprob) * self.logprob)
+                 / tf.to_float(tf.shape(self.logprob)[0]))

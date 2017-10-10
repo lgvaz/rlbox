@@ -9,6 +9,7 @@ class BaseModel:
     def __init__(self, env_config, log_dir=None):
         self.env_config = env_config
         self.log_dir = log_dir
+        self.training_op = None
         self.merged = None
         self._saver = None
         self._writer = None
@@ -28,6 +29,11 @@ class BaseModel:
     def _maybe_create_saver(self):
         if self._saver is None:
             self._saver = tf.train.Saver()
+
+    def _create_training_op(self, learning_rate, opt=tf.train.AdamOptimizer):
+        # TODO: Change to do grad clipping and stuff
+        loss = tf.losses.get_total_loss()
+        self.training_op = opt(learning_rate).minimize(loss)
 
     def save(self, sess, step, name='model'):
         self._maybe_create_saver()

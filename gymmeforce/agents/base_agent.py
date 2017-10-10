@@ -71,5 +71,5 @@ class BaseAgent:
             self.sess = tf.Session()
             self.model.load_or_initialize(self.sess)
 
-    def select_action(self):
+    def select_action(self, state):
         raise NotImplementedError
