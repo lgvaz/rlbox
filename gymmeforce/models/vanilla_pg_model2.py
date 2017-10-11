@@ -5,6 +5,7 @@ from gymmeforce.models import BaseModel
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
 from gymmeforce.common.policy import Policy
+from gymmeforce.common.data_gen import DataGenerator
 
 class VanillaPGModel(BaseModel):
     def __init__(self, env_config, log_dir, entropy_coef=0., policy_graph=dense_policy_graph):
@@ -43,13 +44,18 @@ class VanillaPGModel(BaseModel):
     def select_action(self, sess, state):
         return self.policy.sample_action(sess, state[np.newaxis])
 
-    def fit(self, sess, states, actions, advantages, learning_rate=5e-3):
+    def fit(self, sess, states, actions, advantages, num_epochs=10, batch_size=64, learning_rate=5e-3):
+        data = DataGenerator(states, actions, advantages)
 
-        feed_dict = {
-            self.placeholders['states']: states,
-            self.placeholders['actions']: actions,
-            self.placeholders['advantages']: advantages,
-            self.placeholders['learning_rate']: learning_rate
-        }
+        for i_epoch in range(num_epochs):
+            data_iterator = data.iterate_once(batch_size)
 
-        sess.run(self.training_op, feed_dict=feed_dict)
+            for b_states, b_actions, b_advantages in data_iterator:
+                feed_dict = {
+                    self.placeholders['states']: b_states,
+                    self.placeholders['actions']: b_actions,
+                    self.placeholders['advantages']: b_advantages,
+                    self.placeholders['learning_rate']: learning_rate
+                }
+
+                sess.run(self.training_op, feed_dict=feed_dict)
