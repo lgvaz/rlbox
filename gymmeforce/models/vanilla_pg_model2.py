@@ -9,8 +9,9 @@ from gymmeforce.common.policy import Policy
 from gymmeforce.common.data_gen import DataGenerator
 
 class VanillaPGModel(BaseModel):
-    def __init__(self, env_config, log_dir, entropy_coef=0., policy_graph=dense_policy_graph, value_graph=dense_value_graph):
+    def __init__(self, env_config, log_dir, use_baseline=True, entropy_coef=0., policy_graph=dense_policy_graph, value_graph=dense_value_graph):
         super().__init__(env_config, log_dir)
+        self.use_baseline = use_baseline
         self.entropy_coef = entropy_coef
 
         placeholders_config = {
@@ -20,19 +21,25 @@ class VanillaPGModel(BaseModel):
             'vf_targets': [[None], tf.float32],
             'learning_rate': [[], tf.float32]
         }
+        if env_config['action_space'] == 'discrete':
+            placeholders_config['actions'] = [[None], tf.int32]
+        elif env_config['action_space'] == 'continuous':
+            placeholders_config['actions'] = [[None, env_config['num_actions']], tf.float32]
 
         self._create_placeholders(placeholders_config)
         self.policy = self._create_policy(self.placeholders['states'],
                                           self.placeholders['actions'],
                                           policy_graph)
-        self.baseline_sy = self._create_baseline(value_graph)
+        if self.use_baseline:
+            self.baseline_sy = self._create_baseline(value_graph)
         self._add_losses()
         self._create_training_op(self.placeholders['learning_rate'])
 
     def _add_losses(self):
         ''' This method should be changed to add more losses'''
         self._pg_loss(self.policy, self.placeholders['advantages'], self.entropy_coef)
-        self._baseline_loss(self.baseline_sy, self.placeholders['vf_targets'])
+        if self.use_baseline:
+            self._baseline_loss(self.baseline_sy, self.placeholders['vf_targets'])
 
     def _pg_loss(self, policy, advantages, entropy_coef=0.1):
         loss = -tf.reduce_mean(policy.logprob_sy * advantages)

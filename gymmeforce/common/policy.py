@@ -6,8 +6,17 @@ class Policy:
         self.states_ph = states_ph
         self.actions_ph = actions_ph
 
-        self.logits = graph(states_ph, env_config)
-        self.dist = CategoricalDist(self.logits)
+        params = graph(states_ph, env_config)
+        if env_config['action_space'] == 'discrete':
+            print('Making Discrete Policy')
+            self.dist = CategoricalDist(params)
+        elif env_config['action_space'] == 'continuous':
+            print('Making Continuous Policy')
+            self.dist = DiagGaussianDist(params,
+                                         low_bound=env_config['action_low_bound'],
+                                         high_bound=env_config['action_high_bound'])
+        else:
+            raise ValueError('{} action space not implemented'.format(env_config['action_space']))
 
         self.logprob_sy = self.dist.selected_logprob(actions_ph)
         self.sample_action_sy = self.dist.sample()

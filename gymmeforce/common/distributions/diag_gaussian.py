@@ -2,11 +2,10 @@ import numpy as np
 import tensorflow as tf
 
 class DiagGaussianDist:
-    def __init__(self, mean, logstd, low_bound=None, high_bound=None):
-        self.mean = mean
-        self.logstd = logstd
-        self.std = tf.exp(logstd)
-        self.num_actions = tf.shape(mean)[1]
+    def __init__(self, mean_and_logstd, low_bound=None, high_bound=None):
+        self.mean, self.logstd = mean_and_logstd
+        self.std = tf.exp(self.logstd)
+        self.num_actions = tf.shape(self.mean)[1]
         self.low_bound = low_bound
         self.high_bound = high_bound
 
@@ -18,8 +17,7 @@ class DiagGaussianDist:
 
         return sample_action
 
-    def logprob(self, actions):
-        # TODO: problem not here
+    def selected_logprob(self, actions):
         logprob = -0.5 * tf.log(2 * np.pi)
         logprob += -0.5 * tf.reduce_sum(self.logstd)
         logprob += -0.5 * tf.reduce_sum(((actions - self.mean) / self.std) ** 2, axis=1)
