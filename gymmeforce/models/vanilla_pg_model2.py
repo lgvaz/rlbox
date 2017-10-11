@@ -2,23 +2,23 @@ import numpy as np
 import tensorflow as tf
 from collections import namedtuple
 from gymmeforce.models import BaseModel
+# TODO: Maybe separete dir for graphs?
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
-# TODO: Maybe separete dir for graphs?
+from gymmeforce.common.policy import Policy
 
 class VanillaPGModel(BaseModel):
     def __init__(self, env_config, log_dir, policy_graph=dense_policy_graph):
         super().__init__(env_config, log_dir)
 
-        placeholders_config = {
-            'states': [[None] + list(env_config['state_shape']), env_config['input_type']],
-            'actions': [[None], tf.int32],
-            'advantages': [[None], tf.float32],
-            'vf_targets': [[None], tf.float32],
-            'learning_rate': [[], tf.float32]
-        }
+        self.config['placeholders']['states'] = [[None] + list(env_config['state_shape']),
+                                                 env_config['input_type']]
+        self.config['placeholders']['actions'] = [[None], tf.int32]
+        self.config['placeholders']['advantages'] = [[None], tf.float32]
+        self.config['placeholders']['vf_targets'] = [[None], tf.float32]
+        self.config['placeholders']['learning_rate'] = [[], tf.float32]
 
-        self._create_placeholders(placeholders_config)
+        self._create_placeholders(self.config['placeholders'])
         self.policy = self._create_policy(self.placeholders['states'],
                                           self.placeholders['actions'],
                                           policy_graph)
@@ -29,22 +29,25 @@ class VanillaPGModel(BaseModel):
         ''' This method should be changed to add more losses'''
         self._pg_loss(self.policy, self.placeholders['advantages'])
 
-    def _pg_loss(self, policy, advantages):
+    def _pg_loss(self, policy, advantages, entropy_coef=0.1):
         pg_loss = -tf.reduce_mean(policy.logprob_sy * advantages)
+        pg_loss += -(entropy_coef * policy.entropy_sy)
         tf.losses.add_loss(pg_loss)
 
     def _create_policy(self, states_ph, actions_ph, policy_graph):
-        logits = policy_graph(states_ph, self.env_config)
+        policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
 
-        policy = namedtuple('Policy', 'dist sample_action')
-        policy.dist = CategoricalDist(logits)
-        policy.logprob_sy = policy.dist.selected_logprob(actions_ph)
-        policy.sample_action_sy = policy.dist.sample()
-        policy.sample_action = lambda sess, states: sess.run(policy.sample_action_sy,
-                                                             feed_dict={states_ph: states})
-        policy.entropy_sy = policy.dist.entropy()
-        policy.entropy = lambda sess, states: sess.run(policy.entropy_sy,
-                                                       feed_dict={states_ph: states})
+        # logits = policy_graph(states_ph, self.env_config)
+
+        # policy = namedtuple('Policy', 'dist sample_action')
+        # policy.dist = CategoricalDist(logits)
+        # policy.logprob_sy = policy.dist.selected_logprob(actions_ph)
+        # policy.sample_action_sy = policy.dist.sample()
+        # policy.sample_action = lambda sess, states: sess.run(policy.sample_action_sy,
+        #                                                      feed_dict={states_ph: states})
+        # policy.entropy_sy = policy.dist.entropy()
+        # policy.entropy = lambda sess, states: sess.run(policy.entropy_sy,
+        #                                                feed_dict={states_ph: states})
 
         return policy
 

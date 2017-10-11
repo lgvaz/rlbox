@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+from collections import defaultdict
 from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 
@@ -9,6 +10,7 @@ class BaseModel:
     def __init__(self, env_config, log_dir=None):
         self.env_config = env_config
         self.log_dir = log_dir
+        self.config = defaultdict(dict)
         self.training_op = None
         self.merged = None
         self._saver = None
