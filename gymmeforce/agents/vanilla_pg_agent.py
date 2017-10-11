@@ -7,11 +7,12 @@ from gymmeforce.agents import BatchAgent
 from gymmeforce.models.vanilla_pg_model2 import VanillaPGModel
 
 class VanillaPGAgent(BatchAgent):
-    def __init__(self, env_name, log_dir, normalize_baseline=True,
+    def __init__(self, env_name, log_dir, entropy_coef=0.1,
                  policy_graph=None, value_graph=None, input_type=None, env_wrapper=None):
         super(VanillaPGAgent, self).__init__(env_name, log_dir, env_wrapper)
 
         self.model = VanillaPGModel(self.env_config,
+                                    entropy_coef=entropy_coef,
                                     # policy_graph=policy_graph,
                                     # value_graph=value_graph,
                                     log_dir=log_dir)
@@ -19,7 +20,7 @@ class VanillaPGAgent(BatchAgent):
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, policy_learning_rate, vf_learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64):
+    def train(self, learning_rate, use_baseline=True, normalize_baseline=True, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64):
         self._maybe_create_tf_sess()
         monitored_env, env = self._create_env(os.path.join(self.log_dir, 'videos/train'))
 
@@ -32,11 +33,26 @@ class VanillaPGAgent(BatchAgent):
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
             returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
 
+            baseline_targets = returns
+            if use_baseline:
+                baseline = self.model.compute_baseline(self.sess, states)
+                if normalize_baseline:
+                    returns_mean = np.mean(returns)
+                    returns_std = np.std(returns)
+                    # Normalize targets
+                    baseline_targets = (returns - returns_mean) / (returns_std + 1e-8)
+                    # If baseline targets are normalized they have to be rescaled
+                    # before subtracting from returns
+                    baseline_mean = np.mean(baseline)
+                    baseline_std = np.std(baseline)
+                    norm_baseline = (baseline - baseline_mean) / (baseline_std + 1e-8)
+                    baseline = norm_baseline * returns_std + returns_mean
+                advantages = returns - baseline
+            else:
+                advantages = returns
+
             # Train
-            # policy_lr = policy_learning_rate(i_iter)
-            # self.model.train(self.sess, states, actions, returns, policy_learning_rate,
-                             # vf_learning_rate, num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
-            self.model.fit(self.sess, states, actions, returns)
+            self.model.fit(self.sess, states, actions, baseline_targets, advantages, num_epochs, batch_size, learning_rate, logger=self.logger)
 
             # Logs
             ep_rewards = monitored_env.get_episode_rewards()
