@@ -10,8 +10,7 @@ from gymmeforce.common.policy import Policy
 from gymmeforce.common.data_gen import DataGenerator
 
 class VanillaPGModel(BaseModel):
-    def __init__(self, env_config, normalize_advantages=True, use_baseline=True, normalize_baseline=True, entropy_coef=0.,
-                 policy_graph=None, value_graph=None, input_type=None, log_dir=None):
+    def __init__(self, env_config, normalize_advantages=True, use_baseline=True, normalize_baseline=True, entropy_coef=0., policy_graph=None, value_graph=None, input_type=None, log_dir=None):
         super(VanillaPGModel, self).__init__(env_config, log_dir)
         self.normalize_advantages = normalize_advantages
         self.use_baseline = use_baseline
@@ -27,7 +26,6 @@ class VanillaPGModel(BaseModel):
             'states': [[None] + list(env_config['state_shape']), env_config['input_type']],
             'returns': [[None], tf.float32],
             'baseline': [[None], tf.float32],
-            # 'advantages': [[None], tf.float32],
             'learning_rate': [[], tf.float32]
         }
         if env_config['action_space'] == 'discrete':
@@ -57,20 +55,25 @@ class VanillaPGModel(BaseModel):
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _pg_loss(self, policy, entropy_coef):
-        if self.use_baseline:
-            advantages = self.placeholders['returns'] - self.baseline
-        else:
-            advantages = self.placeholders['returns']
-        # Normalize advantages
-        if self.normalize_advantages:
-            advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
-            advs_std = advs_var ** 0.5
-            advantages = (advantages - advs_mean) / (advs_std + 1e-7)
+        advantages = self._estimate_advatanges()
 
         loss = -tf.reduce_mean(policy.logprob_sy * advantages)
         loss += -(entropy_coef * policy.entropy_sy)
 
         tf.losses.add_loss(loss)
+
+    def _estimate_advatanges(self):
+        if self.use_baseline:
+            advantages = self.placeholders['returns'] - self.baseline
+        else:
+            advantages = self.placeholders['returns']
+
+        if self.normalize_advantages:
+            advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
+            advs_std = advs_var ** 0.5
+            advantages = (advantages - advs_mean) / (advs_std + 1e-7)
+
+        return advantages
 
     def _baseline_loss(self, baseline_sy, targets):
         loss = tf.losses.mean_squared_error(labels=targets, predictions=baseline_sy)
@@ -102,8 +105,7 @@ class VanillaPGModel(BaseModel):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
     # TODO: Compute adv and then fit policy
-    def fit(self, sess, states, actions, returns, learning_rate,
-                    num_epochs=10, batch_size=64, logger=None):
+    def fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None):
         # Calculate baseline
         if self.use_baseline:
             baseline = self.compute_baseline(sess, states)
@@ -124,7 +126,10 @@ class VanillaPGModel(BaseModel):
                     self.placeholders['baseline']: baseline_batch,
                     self.placeholders['learning_rate']: learning_rate
                 }
-                sess.run(self.training_op, feed_dict=feed_dict)
+                loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
+            logger.add_debug('Loss per batch', loss)
 
         if logger:
+            entropy = self.policy.entropy(sess, states)
             logger.add_log('Learning Rate', learning_rate, precision=5)
+            logger.add_log('Entropy', entropy)
