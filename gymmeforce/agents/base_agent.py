@@ -10,13 +10,13 @@ from gymmeforce.common.print_utils import Logger
 # TODO: Record frequency as an argument
 # TODO: Change video dir when evaluating
 class BaseAgent:
-    def __init__(self, env_name, log_dir, env_wrapper=None):
+    def __init__(self, env_name, log_dir, env_wrapper=None, debug=False):
         self.env_name = env_name
         self.log_dir = log_dir
         self.env_wrapper = env_wrapper
+        self.logger = Logger(debug)
         self.model = None
         self.sess = None
-        self.logger = Logger()
         self.env_config = {
             'env_name': env_name,
             'env_wrapper': env_wrapper

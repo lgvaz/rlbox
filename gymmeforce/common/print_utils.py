@@ -4,7 +4,8 @@ from collections import defaultdict
 
 
 class Logger:
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
         self.logs = defaultdict(list)
         self.precision = dict()
         self.time = time.time()
@@ -12,6 +13,10 @@ class Logger:
     def add_log(self, name, value, precision=2):
         self.logs[name].append(value)
         self.precision[name] = precision
+
+    def add_debug(self, name, value, precision=2):
+        if self.debug:
+            self.add_log(name, value, precision)
 
     def log(self, header=None):
         ''' Write the mean of the values added to each key and clear previous values '''

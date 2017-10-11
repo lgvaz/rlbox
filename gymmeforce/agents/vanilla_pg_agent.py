@@ -8,8 +8,8 @@ from gymmeforce.models.vanilla_pg_model2 import VanillaPGModel
 
 class VanillaPGAgent(BatchAgent):
     def __init__(self, env_name, log_dir, entropy_coef=0.1,
-                 policy_graph=None, value_graph=None, input_type=None, env_wrapper=None):
-        super(VanillaPGAgent, self).__init__(env_name, log_dir, env_wrapper)
+                 policy_graph=None, value_graph=None, input_type=None, env_wrapper=None, debug=False):
+        super(VanillaPGAgent, self).__init__(env_name, log_dir, env_wrapper=env_wrapper, debug=debug)
 
         self.model = VanillaPGModel(self.env_config,
                                     entropy_coef=entropy_coef,
