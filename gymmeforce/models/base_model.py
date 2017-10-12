@@ -10,6 +10,7 @@ class BaseModel:
     def __init__(self, env_config, log_dir=None):
         self.env_config = env_config
         self.log_dir = log_dir
+        self.placeholders_config = {}
         self.config = defaultdict(dict)
         self.training_op = None
         self.merged = None
@@ -34,8 +35,8 @@ class BaseModel:
 
     def _create_training_op(self, learning_rate, opt=tf.train.AdamOptimizer):
         # TODO: Change to do grad clipping and stuff
-        loss = tf.losses.get_total_loss()
-        self.training_op = opt(learning_rate).minimize(loss)
+        self.loss_sy = tf.losses.get_total_loss()
+        self.training_op = opt(learning_rate).minimize(self.loss_sy)
 
     def save(self, sess, step, name='model'):
         self._maybe_create_saver()

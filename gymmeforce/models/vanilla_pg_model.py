@@ -22,18 +22,10 @@ class VanillaPGModel(BaseModel):
         if value_graph == None:
             value_graph = dense_value_graph
 
-        placeholders_config = {
-            'states': [[None] + list(env_config['state_shape']), env_config['input_type']],
-            'returns': [[None], tf.float32],
-            'baseline': [[None], tf.float32],
-            'learning_rate': [[], tf.float32]
-        }
-        if env_config['action_space'] == 'discrete':
-            placeholders_config['actions'] = [[None], tf.int32]
-        if env_config['action_space'] == 'continuous':
-            placeholders_config['actions'] = [[None, env_config['num_actions']], tf.float32]
 
-        self._create_placeholders(placeholders_config)
+        self._set_placeholders_config()
+        self._create_placeholders(self.placeholders_config)
+        print(self.placeholders)
         self.policy = self._create_policy(self.placeholders['states'],
                                           self.placeholders['actions'],
                                           policy_graph)
@@ -47,6 +39,26 @@ class VanillaPGModel(BaseModel):
 
         self._add_losses()
         self._create_training_op(self.placeholders['learning_rate'])
+
+    def _set_placeholders_config(self):
+        # self.config['placeholders']['states'] = [[None] + list(env_config['state_shape']), env_config['input_type']]
+        # self.config['placeholders']['returns'] = [[None], tf.float32]
+        # self.config['placeholders']['baseline'] = [[None], tf.float32]
+        # self.config['placeholders']['learning_rate'] = [[], tf.float32]
+        # if env_config['action_space'] == 'discrete':
+        #     self.config['placeholders']['actions'] = [[None], tf.int32]
+        # if env_config['action_space'] == 'continuous':
+        #     self.config['placeholders']['actions'] = [[None, env_config['num_actions']], tf.float32]
+        self.placeholders_config = {
+            'states': [[None] + list(self.env_config['state_shape']), self.env_config['input_type']],
+            'returns': [[None], tf.float32],
+            'baseline': [[None], tf.float32],
+            'learning_rate': [[], tf.float32]
+        }
+        if self.env_config['action_space'] == 'discrete':
+            self.placeholders_config['actions'] = [[None], tf.int32]
+        if self.env_config['action_space'] == 'continuous':
+            self.placeholders_config['actions'] = [[None, self.env_config['num_actions']], tf.float32]
 
     def _add_losses(self):
         ''' This method should be changed to add more losses'''
