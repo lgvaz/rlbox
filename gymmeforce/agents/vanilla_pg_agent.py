@@ -5,7 +5,8 @@ import tensorflow as tf
 import itertools
 from gymmeforce.agents import BatchAgent
 # from gymmeforce.models.vanilla_pg_model2 import VanillaPGModel
-from gymmeforce.models.vanilla_pg_model import VanillaPGModel
+from gymmeforce.models import VanillaPGModel
+from gymmeforce.models import PPOModel
 
 class VanillaPGAgent(BatchAgent):
     def __init__(self, env_name, log_dir, normalize_advantages=False, use_baseline=True, normalize_baseline=True, entropy_coef=0.,
@@ -25,9 +26,10 @@ class VanillaPGAgent(BatchAgent):
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64):
+    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64, record_freq=None):
         self._maybe_create_tf_sess()
-        monitored_env, env = self._create_env(os.path.join(self.log_dir, 'videos/train'))
+        monitored_env, env = self._create_env(os.path.join(self.log_dir, 'videos/train'),
+                                              record_freq=record_freq)
 
         i_step = 0
         for i_iter in itertools.count():
