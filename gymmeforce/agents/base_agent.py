@@ -47,9 +47,11 @@ class BaseAgent:
         else:
             self.env_config['input_type'] = tf.float32
 
-    def _create_env(self, monitor_dir, record_freq=None):
+    def _create_env(self, monitor_dir, record_freq=None, max_episodes_steps=None):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
         env = gym.make(self.env_name)
+        if max_episodes_steps is not None:
+            env._max_episode_steps = max_episodes_steps
         monitored_env = wrappers.Monitor(
             env=env,
             directory=monitor_path,

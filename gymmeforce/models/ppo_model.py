@@ -24,7 +24,6 @@ class PPOModel(VanillaPGModel):
 
     def _set_placeholders_config(self):
         super()._set_placeholders_config()
-        # self.config['placeholders']['old_logprob'] = [[None], tf.float32]
         self.placeholders_config['old_logprob'] = [[None], tf.float32]
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
