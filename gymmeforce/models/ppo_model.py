@@ -27,36 +27,14 @@ class PPOModel(VanillaPGModel):
         # self.config['placeholders']['old_logprob'] = [[None], tf.float32]
         self.placeholders_config['old_logprob'] = [[None], tf.float32]
 
-    def fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None):
-        # super().fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None)
+    def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
+        super()._fetch_placeholders_data_dict(sess, states, actions, returns)
 
         # Calculate old logprobs
         old_logprob = sess.run(self.policy.logprob_sy, feed_dict={self.placeholders['actions']: actions, self.placeholders['states']: states})
-        # Calculate baseline
-        if self.use_baseline:
-            baseline = self.compute_baseline(sess, states)
-        else:
-            # Doesn't matter, just used to feed_dict
-            baseline = returns
+        self.placeholders_and_data[self.placeholders['old_logprob']] = old_logprob
 
-        data = DataGenerator(states, actions, returns, baseline, old_logprob)
-        for i_epoch in range(num_epochs):
-            data_iterator = data.iterate_once(batch_size)
 
-            for batch in data_iterator:
-                states_batch, actions_batch, returns_batch, baseline_batch, old_logprob_batch = batch
-                feed_dict = {
-                    self.placeholders['states']: states_batch,
-                    self.placeholders['actions']: actions_batch,
-                    self.placeholders['returns']: returns_batch,
-                    self.placeholders['baseline']: baseline_batch,
-                    self.placeholders['learning_rate']: learning_rate,
-                    self.placeholders['old_logprob']: old_logprob_batch
-                }
-                loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
-            logger.add_debug('Loss per batch', loss)
+    def fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None):
+        super().fit(sess, states, actions, returns, learning_rate, num_epochs, batch_size, logger)
 
-        if logger:
-            entropy = self.policy.entropy(sess, states)
-            logger.add_log('Learning Rate', learning_rate, precision=5)
-            logger.add_log('Entropy', entropy)

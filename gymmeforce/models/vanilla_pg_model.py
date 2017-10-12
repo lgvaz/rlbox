@@ -25,7 +25,6 @@ class VanillaPGModel(BaseModel):
 
         self._set_placeholders_config()
         self._create_placeholders(self.placeholders_config)
-        print(self.placeholders)
         self.policy = self._create_policy(self.placeholders['states'],
                                           self.placeholders['actions'],
                                           policy_graph)
