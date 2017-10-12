@@ -110,6 +110,18 @@ class VanillaPGModel(BaseModel):
         normalized_baseline = (self.baseline - baseline_mean) / (baseline_std + 1e-7)
         self.baseline = normalized_baseline * returns_std + returns_mean
 
+    def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
+        ''' Create a dictionary mapping placeholders to their correspondent value '''
+        self.placeholders_and_data = {
+            self.placeholders['states']: states,
+            self.placeholders['actions']: actions,
+            self.placeholders['returns']: returns
+        }
+        # Calculate baseline
+        if self.use_baseline:
+            baseline = self.compute_baseline(sess, states)
+            self.placeholders_and_data[self.placeholders['baseline']] = baseline
+
     def select_action(self, sess, state):
         return self.policy.sample_action(sess, state[np.newaxis])
 
@@ -118,28 +130,16 @@ class VanillaPGModel(BaseModel):
 
     # TODO: Compute adv and then fit policy
     def fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None):
-        # Calculate baseline
-        if self.use_baseline:
-            baseline = self.compute_baseline(sess, states)
-        else:
-            # Doesn't matter, just used to feed_dict
-            baseline = returns
+        self._fetch_placeholders_data_dict(sess, states, actions, returns)
+        data = DataGenerator(self.placeholders_and_data)
 
-        data = DataGenerator(states, actions, returns, baseline)
         for i_epoch in range(num_epochs):
-            data_iterator = data.iterate_once(batch_size)
+            for feed_dict in data.fetch_batch_dict(batch_size):
+                feed_dict[self.placeholders['learning_rate']] = learning_rate
 
-            for batch in data_iterator:
-                states_batch, actions_batch, returns_batch, baseline_batch = batch
-                feed_dict = {
-                    self.placeholders['states']: states_batch,
-                    self.placeholders['actions']: actions_batch,
-                    self.placeholders['returns']: returns_batch,
-                    self.placeholders['baseline']: baseline_batch,
-                    self.placeholders['learning_rate']: learning_rate
-                }
                 loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
-            logger.add_debug('Loss per batch', loss)
+
+                logger.add_debug('Loss per batch', loss)
 
         if logger:
             entropy = self.policy.entropy(sess, states)
