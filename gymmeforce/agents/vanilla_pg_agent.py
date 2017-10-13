@@ -38,7 +38,9 @@ class VanillaPGAgent(BatchAgent):
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10, batch_size=64, record_freq=None, max_episode_steps=None):
+    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1,
+              rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10,
+              batch_size=64, record_freq=None, max_episode_steps=None):
         self._maybe_create_tf_sess()
         monitored_env, env = self._create_env(monitor_dir='videos/train',
                                               record_freq=record_freq,
@@ -47,13 +49,14 @@ class VanillaPGAgent(BatchAgent):
         i_step = 0
         for i_iter in itertools.count():
             # Generate policy rollouts
-            trajectories = self.generate_batch(env, timesteps_per_batch, gamma=rew_discount_factor)
+            trajectories = self.generate_batch(env, timesteps_per_batch,
+                                               gamma=rew_discount_factor)
             states = np.concatenate([trajectory['states'] for trajectory in trajectories])
             actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
-            returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
-
-            self.model.fit(self.sess, states, actions, returns, learning_rate, num_epochs, batch_size, logger=self.logger)
+            returns = np.concatenate([trajectory['returns'] for trajectory in trajectories]) 
+            self.model.fit(self.sess, states, actions, returns, learning_rate,
+                           num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
 
             # Logs
             ep_rewards = monitored_env.get_episode_rewards()
