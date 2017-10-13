@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+
 class DiagGaussianDist:
     def __init__(self, mean_and_logstd, low_bound=None, high_bound=None):
         self.mean, self.logstd = mean_and_logstd
@@ -11,7 +12,6 @@ class DiagGaussianDist:
 
     def sample(self):
         sample_action = self.mean + self.std * tf.random_normal(tf.shape(self.mean))
-        # TODO: Clipping actions is making logstd to explode!! DONT THINK SO
         if self.low_bound is not None and self.high_bound is not None:
             sample_action = tf.clip_by_value(sample_action, self.low_bound, self.high_bound)
 
@@ -27,6 +27,4 @@ class DiagGaussianDist:
     def entropy(self):
         entropy = 0.5 * (tf.reduce_sum(self.logstd)
                          + tf.to_float(self.num_actions) * (tf.log(2 * np.pi * np.e)))
-        # entropy = tf.reduce_sum(self.logstd + 0.5 * tf.log(2 * np.pi * np.e), axis=1)
-        # entropy = 0.5 * tf.reduce_sum(self.log)
         return entropy

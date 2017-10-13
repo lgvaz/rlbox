@@ -10,7 +10,8 @@ from gymmeforce.common.print_utils import Logger
 # TODO: Record frequency as an argument
 # TODO: Change video dir when evaluating
 class BaseAgent:
-    def __init__(self, env_name, log_dir, env_wrapper=None, debug=False):
+    def __init__(self, env_name, log_dir='data/examples',
+                 env_wrapper=None, debug=False, **kwargs):
         self.env_name = env_name
         self.log_dir = log_dir
         self.env_wrapper = env_wrapper
@@ -47,11 +48,11 @@ class BaseAgent:
         else:
             self.env_config['input_type'] = tf.float32
 
-    def _create_env(self, monitor_dir, record_freq=None, max_episodes_steps=None):
+    def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
         env = gym.make(self.env_name)
-        if max_episodes_steps is not None:
-            env._max_episode_steps = max_episodes_steps
+        if max_episode_steps is not None:
+            env._max_episode_steps = max_episode_steps
         monitored_env = wrappers.Monitor(
             env=env,
             directory=monitor_path,

@@ -4,8 +4,8 @@ from gymmeforce.common.utils import discounted_sum_rewards
 
 
 class BatchAgent(BaseAgent):
-    def __init__(self, env_name, log_dir, env_wrapper=None, debug=False):
-        super(BatchAgent, self).__init__(env_name, log_dir, env_wrapper, debug=debug)
+    def __init__(self, env_name, **kwargs):
+        super(BatchAgent, self).__init__(env_name, **kwargs)
 
     def _run_episode(self, env, render=False):
         state = env.reset()
@@ -30,7 +30,6 @@ class BatchAgent(BaseAgent):
                       'rewards': np.array(rewards)}
 
         return trajectory
-
 
     def generate_batch(self, env, batch_timesteps, gamma=0.99):
         total_steps = 0

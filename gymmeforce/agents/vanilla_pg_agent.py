@@ -9,18 +9,31 @@ from gymmeforce.models import VanillaPGModel
 from gymmeforce.models import PPOModel
 
 class VanillaPGAgent(BatchAgent):
-    def __init__(self, env_name, log_dir, normalize_advantages=False, use_baseline=True, normalize_baseline=True, entropy_coef=0., policy_graph=None, value_graph=None, input_type=None, env_wrapper=None, debug=False):
-        super(VanillaPGAgent, self).__init__(env_name, log_dir, env_wrapper=env_wrapper, debug=debug)
-        self.normalize_advantages = normalize_advantages
-        self.use_baseline = use_baseline
-        self.normalize_baseline = normalize_baseline
-        # TODO: IF pg1 pass arguments here
-        self.model = PPOModel(self.env_config,
-                                    use_baseline=use_baseline,
-                                    entropy_coef=entropy_coef,
-                                    # policy_graph=policy_graph,
-                                    # value_graph=value_graph,
-                                    log_dir=log_dir)
+    '''
+    Vanilla Policy Gradient
+
+    Args:
+    	env_name: Gym environment name
+
+    Keyword args:
+        normalize_advantages: Whether or not to normalize advantages (default False)
+        use_baseline: Whether or not to subtract a baseline(NN representing the
+            value function) from the returns (default True)
+        normalize_baseline: Whether or not to normalize baseline (baseline values are rescaled
+            to have the same mean and variance of the returns) (default False)
+        entropy_coef: Entropy penalty added to the loss (default 0.0)
+        policy_graph: Function returning a tensorflow graph representing the policy
+            (default None)
+        value_graph: Function returning a tensorflow graph representing the value function
+            (default None)
+        log_dir: Directory used for writing logs (default 'logs/examples')
+    '''
+    def __init__(self, env_name, **kwargs):
+        super(VanillaPGAgent, self).__init__(env_name, **kwargs)
+        self.model = self._create_model(**kwargs)
+
+    def _create_model(self, **kwargs):
+        return VanillaPGModel(self.env_config, **kwargs)
 
     def select_action(self, state):
         return self.model.select_action(self.sess, state)

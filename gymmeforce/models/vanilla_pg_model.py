@@ -1,17 +1,17 @@
 import numpy as np
 import tensorflow as tf
-from sklearn.utils import shuffle
-from collections import namedtuple
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.models.value_graphs import dense_value_graph
 from gymmeforce.models.base_model import BaseModel
-from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
 from gymmeforce.common.policy import Policy
 from gymmeforce.common.data_gen import DataGenerator
 
+
 class VanillaPGModel(BaseModel):
-    def __init__(self, env_config, normalize_advantages=True, use_baseline=True, normalize_baseline=True, entropy_coef=0., policy_graph=None, value_graph=None, input_type=None, log_dir=None):
-        super(VanillaPGModel, self).__init__(env_config, log_dir)
+    def __init__(self, env_config, normalize_advantages=False, use_baseline=True,
+                 normalize_baseline=False, entropy_coef=0., policy_graph=None,
+                 value_graph=None, **kwargs):
+        super(VanillaPGModel, self).__init__(env_config, **kwargs)
         self.normalize_advantages = normalize_advantages
         self.use_baseline = use_baseline
         self.normalize_baseline = normalize_baseline
@@ -21,7 +21,6 @@ class VanillaPGModel(BaseModel):
             policy_graph = dense_policy_graph
         if value_graph == None:
             value_graph = dense_value_graph
-
 
         self._set_placeholders_config()
         self._create_placeholders(self.placeholders_config)
@@ -40,16 +39,10 @@ class VanillaPGModel(BaseModel):
         self._create_training_op(self.placeholders['learning_rate'])
 
     def _set_placeholders_config(self):
-        # self.config['placeholders']['states'] = [[None] + list(env_config['state_shape']), env_config['input_type']]
-        # self.config['placeholders']['returns'] = [[None], tf.float32]
-        # self.config['placeholders']['baseline'] = [[None], tf.float32]
-        # self.config['placeholders']['learning_rate'] = [[], tf.float32]
-        # if env_config['action_space'] == 'discrete':
-        #     self.config['placeholders']['actions'] = [[None], tf.int32]
-        # if env_config['action_space'] == 'continuous':
-        #     self.config['placeholders']['actions'] = [[None, env_config['num_actions']], tf.float32]
+        ''' Modify this method to add new placeholders '''
         self.placeholders_config = {
-            'states': [[None] + list(self.env_config['state_shape']), self.env_config['input_type']],
+            'states': [[None] + list(self.env_config['state_shape']),
+                       self.env_config['input_type']],
             'returns': [[None], tf.float32],
             'baseline': [[None], tf.float32],
             'learning_rate': [[], tf.float32]
@@ -57,20 +50,23 @@ class VanillaPGModel(BaseModel):
         if self.env_config['action_space'] == 'discrete':
             self.placeholders_config['actions'] = [[None], tf.int32]
         if self.env_config['action_space'] == 'continuous':
-            self.placeholders_config['actions'] = [[None, self.env_config['num_actions']], tf.float32]
+            self.placeholders_config['actions'] = [[None, self.env_config['num_actions']],
+                                                   tf.float32]
 
     def _add_losses(self):
-        ''' This method should be changed to add more losses'''
-        self._pg_loss(self.policy, self.entropy_coef)
+        ''' Modify this method to add new losses e.g. KL penalty '''
+        self._pg_loss(self.policy)
+        self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
-    def _pg_loss(self, policy, entropy_coef):
+    def _pg_loss(self, policy):
         advantages = self._estimate_advatanges()
-
         loss = -tf.reduce_mean(policy.logprob_sy * advantages)
-        loss += -(entropy_coef * policy.entropy_sy)
+        tf.losses.add_loss(loss)
 
+    def _entropy_loss(self, policy, entropy_coef):
+        loss = -(entropy_coef * policy.entropy_sy)
         tf.losses.add_loss(loss)
 
     def _estimate_advatanges(self):
@@ -93,7 +89,8 @@ class VanillaPGModel(BaseModel):
     def _create_baseline(self, value_graph):
         return value_graph(self.placeholders['states'])
 
-    def _create_policy(self, states_ph, actions_ph, policy_graph, scope='policy', reuse=None):
+    def _create_policy(self, states_ph, actions_ph, policy_graph,
+                       scope='policy', reuse=None):
         policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
         return policy
 
@@ -110,7 +107,10 @@ class VanillaPGModel(BaseModel):
         self.baseline = normalized_baseline * returns_std + returns_mean
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
-        ''' Create a dictionary mapping placeholders to their correspondent value '''
+        '''
+        Create a dictionary mapping placeholders to their correspondent value
+        Modify this method to include new placeholders to feed_dict used by training_op
+        '''
         self.placeholders_and_data = {
             self.placeholders['states']: states,
             self.placeholders['actions']: actions,
@@ -127,20 +127,17 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    # TODO: Compute adv and then fit policy
-    def fit(self, sess, states, actions, returns, learning_rate, num_epochs=10, batch_size=64, logger=None):
+    def fit(self, sess, states, actions, returns, learning_rate,
+            num_epochs=10, batch_size=64, logger=None):
         self._fetch_placeholders_data_dict(sess, states, actions, returns)
         data = DataGenerator(self.placeholders_and_data)
 
         for i_epoch in range(num_epochs):
             for feed_dict in data.fetch_batch_dict(batch_size):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
-
                 loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
-
-                logger.add_debug('Loss per batch', loss)
 
         if logger:
             entropy = self.policy.entropy(sess, states)
-            logger.add_log('Learning Rate', learning_rate, precision=5)
+            logger.add_debug('Learning Rate', learning_rate, precision=5)
             logger.add_log('Entropy', entropy)

@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class CategoricalDist:
     def __init__(self, logits):
         self.logits = logits

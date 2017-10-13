@@ -7,7 +7,7 @@ from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 # TODO: Global steps
 class BaseModel:
-    def __init__(self, env_config, log_dir=None):
+    def __init__(self, env_config, log_dir='logs/examples', **kwargs):
         self.env_config = env_config
         self.log_dir = log_dir
         self.placeholders_config = {}
