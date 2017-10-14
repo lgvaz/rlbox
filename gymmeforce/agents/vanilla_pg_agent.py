@@ -42,6 +42,7 @@ class VanillaPGAgent(BatchAgent):
               rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10,
               batch_size=64, record_freq=None, max_episode_steps=None):
         self._maybe_create_tf_sess()
+        self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
         monitored_env, env = self._create_env(monitor_dir='videos/train',
                                               record_freq=record_freq,
                                               max_episode_steps=max_episode_steps)
@@ -55,6 +56,11 @@ class VanillaPGAgent(BatchAgent):
             actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
             returns = np.concatenate([trajectory['returns'] for trajectory in trajectories]) 
+
+            # Update global step
+            num_steps = len(rewards)
+            self.model.increase_global_step(self.sess, num_steps)
+
             self.model.fit(self.sess, states, actions, returns, learning_rate,
                            num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
 
@@ -62,7 +68,6 @@ class VanillaPGAgent(BatchAgent):
             ep_rewards = monitored_env.get_episode_rewards()
             i_episode = len(ep_rewards)
             num_episodes = len(trajectories)
-            num_steps = len(rewards)
             i_step += num_steps
             self.logger.add_log('Reward Mean [{} episodes]'.format(num_episodes),
                                 np.mean(ep_rewards[-num_episodes:]))

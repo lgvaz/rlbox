@@ -9,6 +9,12 @@ class Logger:
         self.logs = defaultdict(list)
         self.precision = dict()
         self.time = time.time()
+        self.tf_scalar_summary_writer = None
+        self.sess = None
+
+    def add_tf_writer(self, sess, tf_scalar_summary_writer):
+        self.sess = sess
+        self.tf_scalar_summary_writer = tf_scalar_summary_writer
 
     def add_log(self, name, value, precision=2):
         self.logs[name].append(value)
@@ -22,8 +28,15 @@ class Logger:
         ''' Write the mean of the values added to each key and clear previous values '''
         avg_dict = {key: '{:.{prec}f}'.format(np.mean(value), prec=self.precision[key])
                     for key, value in self.logs.items()}
+
+        # Log to the console
         self.logs = defaultdict(list)
         print_table(avg_dict, header)
+
+        # Write tensorflow summary
+        if self.tf_scalar_summary_writer is not None:
+            for key, value in avg_dict.items():
+                self.tf_scalar_summary_writer(self.sess, key, float(value))
 
     def timeit(self, steps):
         new_time = time.time()

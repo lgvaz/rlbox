@@ -10,15 +10,19 @@ class BaseModel:
     def __init__(self, env_config, log_dir='logs/examples', **kwargs):
         self.env_config = env_config
         self.log_dir = log_dir
-        self.placeholders_config = {}
-        self.config = defaultdict(dict)
+        self.placeholders = {}
         self.training_op = None
         self.merged = None
         self._saver = None
         self._writer = None
-        self.placeholders = dict()
+
         self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
-        self.increase_global_step_op = tf.assign_add(self.global_step_tensor, 1,
+        placeholders_config = {
+            'add_to_global_step': [[], tf.int32]
+        }
+        self._create_placeholders(placeholders_config)
+        self.increase_global_step_op = tf.assign_add(self.global_step_tensor,
+                                                     self.placeholders['add_to_global_step'],
                                                      name='increase_global_step')
 
     def _create_placeholders(self, config):
@@ -50,11 +54,12 @@ class BaseModel:
             save_path = tf.train.latest_checkpoint(self.log_dir)
         if save_path is None:
             print('Initializing variables')
-            sess.run(tf.global_variables_initializer())
+            self.initialize(sess)
         else:
             print('Loading model from {}'.format(save_path))
             self._saver.restore(sess, save_path)
 
+    #TODO: Not a base function
     def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
             self.learning_rate_ph: learning_rate,
@@ -66,19 +71,18 @@ class BaseModel:
         }
         sess.run(self.training_op, feed_dict=feed_dict)
 
-    def summary_scalar(self, sess, step, name, value):
+    def summary_scalar(self, sess, name, value, step=None):
+        if step is None:
+            step = tf.train.global_step(sess, self.global_step_tensor)
         self._maybe_create_writer(self.log_dir)
         summary = tf.Summary(value=[
             tf.Summary.Value(tag=name, simple_value=value),
         ])
         self._writer.add_summary(summary, step)
 
-    def increase_global_step(self, sess):
-        # Increasing the global step every timestep was consuming too much time
-        sess.run(self.increase_global_step_op)
-
-    def set_global_step(self, sess, step):
-        sess.run(self.set_global_step_op, feed_dict={self.global_step_ph: step})
+    def increase_global_step(self, sess, value):
+        sess.run(self.increase_global_step_op,
+                 feed_dict={self.placeholders['add_to_global_step']: value})
 
     def initialize(self, sess):
         sess.run(tf.global_variables_initializer())
