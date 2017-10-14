@@ -39,7 +39,7 @@ class VanillaPGAgent(BatchAgent):
         return self.model.select_action(self.sess, state)
 
     def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1,
-              rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=10,
+              rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=1,
               batch_size=64, record_freq=None, max_episode_steps=None):
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
@@ -70,7 +70,7 @@ class VanillaPGAgent(BatchAgent):
             num_episodes = len(trajectories)
             i_step += num_steps
             self.logger.add_log('Reward Mean', np.mean(ep_rewards[-num_episodes:]))
-                self.logger.add_log('Entropy', self.model.policy.entropy(self.sess, states))
+            self.logger.add_log('Entropy', self.model.policy.entropy(self.sess, states))
             self.logger.add_log('Learning Rate', learning_rate, precision=5)
             self.logger.timeit(num_steps)
             self.logger.log('Iter {} | Episode {} | Step {}'.format(i_iter, i_episode, i_step))
