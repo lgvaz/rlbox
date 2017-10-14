@@ -121,6 +121,30 @@ class VanillaPGModel(BaseModel):
             baseline = self.compute_baseline(sess, states)
             self.placeholders_and_data[self.placeholders['baseline']] = baseline
 
+    def _create_summaries_op(self):
+        self._maybe_create_writer()
+
+        if self.env_config['action_space'] == 'discrete':
+            tf.summary.histogram('action_probs', self.policy.dist.action_probs)
+
+        if self.env_config['action_space'] == 'continuous':
+            means = self.policy.dist.mean
+            stds = self.policy.dist.std
+            tf.summary.histogram('dist_means', means)
+            tf.summary.histogram('dist_standard_devs', stds)
+            tf.summary.scalar('dist_means_mean', tf.reduce_mean(means))
+            tf.summary.scalar('dist_standard_devs_mean', tf.reduce_mean(stds))
+
+        merged = tf.summary.merge_all()
+
+        return merged
+
+    def write_summaries(self, sess, feed_dict):
+        if self.merged is None:
+            self.merged = self._create_summaries_op()
+        summary = sess.run(self.merged, feed_dict=feed_dict)
+        self._writer.add_summary(summary, self.get_global_step(sess))
+
     def select_action(self, sess, state):
         return self.policy.sample_action(sess, state[np.newaxis])
 
@@ -137,7 +161,4 @@ class VanillaPGModel(BaseModel):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
                 loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
 
-        if logger:
-            entropy = self.policy.entropy(sess, states)
-            logger.add_debug('Learning Rate', learning_rate, precision=5)
-            logger.add_log('Entropy', entropy)
+        self.write_summaries(sess, self.placeholders_and_data)

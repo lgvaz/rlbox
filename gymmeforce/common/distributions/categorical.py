@@ -6,6 +6,7 @@ class CategoricalDist:
         self.logits = logits
         self.num_actions = tf.shape(logits)[1]
         self.logprob = tf.nn.log_softmax(logits)
+        self.action_probs = tf.nn.softmax(logits)
 
     def sample(self, num_samples=1):
         return tf.squeeze(tf.multinomial(self.logits, num_samples))

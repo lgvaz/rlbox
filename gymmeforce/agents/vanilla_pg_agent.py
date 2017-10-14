@@ -69,8 +69,9 @@ class VanillaPGAgent(BatchAgent):
             i_episode = len(ep_rewards)
             num_episodes = len(trajectories)
             i_step += num_steps
-            self.logger.add_log('Reward Mean [{} episodes]'.format(num_episodes),
-                                np.mean(ep_rewards[-num_episodes:]))
+            self.logger.add_log('Reward Mean', np.mean(ep_rewards[-num_episodes:]))
+                self.logger.add_log('Entropy', self.model.policy.entropy(self.sess, states))
+            self.logger.add_log('Learning Rate', learning_rate, precision=5)
             self.logger.timeit(num_steps)
             self.logger.log('Iter {} | Episode {} | Step {}'.format(i_iter, i_episode, i_step))
 

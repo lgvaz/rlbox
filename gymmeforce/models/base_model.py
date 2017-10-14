@@ -29,9 +29,9 @@ class BaseModel:
         for name, (shape, dtype) in config.items():
             self.placeholders[name] = tf.placeholder(dtype, shape, name)
 
-    def _maybe_create_writer(self, logdir):
+    def _maybe_create_writer(self):
         if self._writer is None:
-            self._writer = tf.summary.FileWriter(logdir, graph=tf.get_default_graph())
+            self._writer = tf.summary.FileWriter(self.log_dir, graph=tf.get_default_graph())
 
     def _maybe_create_saver(self):
         if self._saver is None:
@@ -73,8 +73,8 @@ class BaseModel:
 
     def summary_scalar(self, sess, name, value, step=None):
         if step is None:
-            step = tf.train.global_step(sess, self.global_step_tensor)
-        self._maybe_create_writer(self.log_dir)
+            step = self.get_global_step(sess)
+        self._maybe_create_writer()
         summary = tf.Summary(value=[
             tf.Summary.Value(tag=name, simple_value=value),
         ])
@@ -83,6 +83,9 @@ class BaseModel:
     def increase_global_step(self, sess, value):
         sess.run(self.increase_global_step_op,
                  feed_dict={self.placeholders['add_to_global_step']: value})
+
+    def get_global_step(self, sess):
+        return tf.train.global_step(sess, self.global_step_tensor)
 
     def initialize(self, sess):
         sess.run(tf.global_variables_initializer())
