@@ -84,7 +84,7 @@ class DQNModel(BaseModel):
         return op_holder
 
     def _create_summaries_op(self):
-        self._maybe_create_writer(self.log_dir)
+        self._maybe_create_writer()
         tf.summary.scalar('loss', self.total_error)
         tf.summary.scalar('Q_mean', tf.reduce_mean(self.q_online_t))
         tf.summary.scalar('Q_max', tf.reduce_max(self.q_online_t))
