@@ -9,6 +9,7 @@ class PPOModel(VanillaPGModel):
 
     def _add_losses(self):
         self._surrogate_loss(self.policy)
+        self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
