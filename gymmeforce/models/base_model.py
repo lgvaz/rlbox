@@ -16,12 +16,12 @@ class BaseModel:
         self._saver = None
         self._writer = None
 
-        self.global_step_tensor = tf.Variable(1, name='global_step', trainable=False)
+        self.global_step_sy = tf.Variable(1, name='global_step', trainable=False)
         placeholders_config = {
             'add_to_global_step': [[], tf.int32]
         }
         self._create_placeholders(placeholders_config)
-        self.increase_global_step_op = tf.assign_add(self.global_step_tensor,
+        self.increase_global_step_op = tf.assign_add(self.global_step_sy,
                                                      self.placeholders['add_to_global_step'],
                                                      name='increase_global_step')
 
@@ -42,10 +42,10 @@ class BaseModel:
         self.loss_sy = tf.losses.get_total_loss()
         self.training_op = opt(learning_rate).minimize(self.loss_sy)
 
-    def save(self, sess, step, name='model'):
+    def save(self, sess, name='model'):
         self._maybe_create_saver()
         save_path = os.path.join(self.log_dir, name)
-        self._saver.save(sess, save_path, global_step=step)
+        self._saver.save(sess, save_path, global_step=self.global_step_sy)
 
     def load_or_initialize(self, sess, save_path=None):
         ''' Load from checkpoint if exists, else initialize variables '''
@@ -59,7 +59,7 @@ class BaseModel:
             print('Loading model from {}'.format(save_path))
             self._saver.restore(sess, save_path)
 
-    #TODO: Not a base function
+    #TODO: Not a base function, currently used in DQN
     def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
         feed_dict = {
             self.learning_rate_ph: learning_rate,
@@ -85,7 +85,7 @@ class BaseModel:
                  feed_dict={self.placeholders['add_to_global_step']: value})
 
     def get_global_step(self, sess):
-        return tf.train.global_step(sess, self.global_step_tensor)
+        return tf.train.global_step(sess, self.global_step_sy)
 
     def initialize(self, sess):
         sess.run(tf.global_variables_initializer())

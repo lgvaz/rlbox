@@ -9,7 +9,7 @@ from gymmeforce.common.data_gen import DataGenerator
 
 class VanillaPGModel(BaseModel):
     def __init__(self, env_config, normalize_advantages=False, use_baseline=True,
-                 normalize_baseline=False, entropy_coef=0., policy_graph=None,
+                 normalize_baseline=False, entropy_coef=0.0, policy_graph=None,
                  value_graph=None, **kwargs):
         super(VanillaPGModel, self).__init__(env_config, **kwargs)
         self.normalize_advantages = normalize_advantages

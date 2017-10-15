@@ -8,22 +8,22 @@ class PPOModel(VanillaPGModel):
         super().__init__(env_config, **kwargs)
 
     def _add_losses(self):
-        self._surrogate_loss(self.policy)
+        self._clipped_surrogate_loss(self.policy, self.epsilon_clip)
         self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
-    def _surrogate_loss(self, policy):
+    def _clipped_surrogate_loss(self, policy, epsilon_clip):
         advantages = self._estimate_advatanges()
         prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
         clipped_prob_ratio = tf.clip_by_value(prob_ratio,
-                                              1 - self.epsilon_clip,
-                                              1 + self.epsilon_clip)
-        surrogate_losses = tf.minimum(prob_ratio * advantages,
-                                      clipped_prob_ratio * advantages)
-        surrogate_loss = -tf.reduce_mean(surrogate_losses)
+                                              1 - epsilon_clip,
+                                              1 + epsilon_clip)
+        clipped_surrogate_losses = tf.minimum(prob_ratio * advantages,
+                                              clipped_prob_ratio * advantages)
+        clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
-        tf.losses.add_loss(surrogate_loss)
+        tf.losses.add_loss(clipped_surrogate_loss)
 
     def _set_placeholders_config(self):
         super()._set_placeholders_config()

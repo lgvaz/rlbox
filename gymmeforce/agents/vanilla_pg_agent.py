@@ -47,7 +47,6 @@ class VanillaPGAgent(BatchAgent):
                                               record_freq=record_freq,
                                               max_episode_steps=max_episode_steps)
 
-        i_step = 0
         for i_iter in itertools.count():
             # Generate policy rollouts
             trajectories = self.generate_batch(env, timesteps_per_batch,
@@ -68,7 +67,7 @@ class VanillaPGAgent(BatchAgent):
             ep_rewards = monitored_env.get_episode_rewards()
             i_episode = len(ep_rewards)
             num_episodes = len(trajectories)
-            i_step += num_steps
+            i_step = self.model.get_global_step(self.sess)
             self.logger.add_log('Reward Mean', np.mean(ep_rewards[-num_episodes:]))
             self.logger.add_log('Entropy', self.model.policy.entropy(self.sess, states))
             self.logger.add_log('Learning Rate', learning_rate, precision=5)
@@ -80,3 +79,6 @@ class VanillaPGAgent(BatchAgent):
                 or i_episode // max_episodes >= 1
                 or i_step // max_steps >= 1):
                 break
+
+        # Save
+        self.model.save(self.sess)
