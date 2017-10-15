@@ -236,3 +236,14 @@ def discounted_sum_rewards_final_sum(rewards, dones, gamma=0.99):
         reward_sum = reward + gamma * reward_sum
 
     return reward_sum
+
+def tf_copy_params_op(from_scope, to_scope, soft_update=1.):
+    # Get variables within defined scope
+    from_scope_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, from_scope)
+    to_scope_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, to_scope)
+    # Create operations that copy the variables
+    op_holder = [to_scope_var.assign(soft_update * from_scope_var
+                                     + (1 - soft_update) * to_scope_var)
+                 for from_scope_var, to_scope_var in zip(from_scope_vars, to_scope_vars)]
+
+    return op_holder

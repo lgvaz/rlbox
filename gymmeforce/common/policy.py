@@ -3,16 +3,18 @@ from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
 
 class Policy:
     def __init__(self, env_config, states_ph, actions_ph, graph,
-                 scope='policy', reuse=None):
+                 scope='policy', reuse=None, trainable=True):
         self.states_ph = states_ph
         self.actions_ph = actions_ph
 
-        params = graph(states_ph, env_config, scope=scope, reuse=reuse)
+        params = graph(states_ph, env_config, scope=scope, reuse=reuse, trainable=trainable)
         if env_config['action_space'] == 'discrete':
-            print('Making Discrete Policy')
+            print('Making Discrete Policy with scope ({})'.format(scope))
+            self.dist_function = CategoricalDist
             self.dist = CategoricalDist(params)
         elif env_config['action_space'] == 'continuous':
             print('Making Continuous Policy')
+            self.dist_function = DiagGaussianDist
             self.dist = DiagGaussianDist(params,
                                          low_bound=env_config['action_low_bound'],
                                          high_bound=env_config['action_high_bound'])
@@ -29,3 +31,6 @@ class Policy:
 
     def entropy(self, sess, states):
         return sess.run(self.entropy_sy, feed_dict={self.states_ph: states})
+
+    def kl_divergence(self, old_policy, new_policy):
+        return self.dist_function.kl_divergence(old_policy.dist, new_policy.dist)

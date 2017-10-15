@@ -18,18 +18,18 @@ class VanillaPGModel(BaseModel):
         self.entropy_coef = entropy_coef
 
         if policy_graph == None:
-            policy_graph = dense_policy_graph
+            self.policy_graph = dense_policy_graph
         if value_graph == None:
-            value_graph = dense_value_graph
+            self.value_graph = dense_value_graph
 
         self._set_placeholders_config()
         self._create_placeholders(self.placeholders_config)
-        self.policy = self._create_policy(self.placeholders['states'],
-                                          self.placeholders['actions'],
-                                          policy_graph)
+        self._create_policy(self.placeholders['states'],
+                            self.placeholders['actions'],
+                            self.policy_graph)
 
         if self.use_baseline:
-            self.baseline_sy = self._create_baseline(value_graph)
+            self.baseline_sy = self._create_baseline(self.value_graph)
             self.baseline_target = self.placeholders['returns']
             self.baseline = self.placeholders['baseline']
             if normalize_baseline:
@@ -91,8 +91,7 @@ class VanillaPGModel(BaseModel):
 
     def _create_policy(self, states_ph, actions_ph, policy_graph,
                        scope='policy', reuse=None):
-        policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
-        return policy
+        self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
 
     def _normalize_baseline(self):
         # Normalize target values for baseline
@@ -125,7 +124,7 @@ class VanillaPGModel(BaseModel):
         self._maybe_create_writer()
 
         if self.env_config['action_space'] == 'discrete':
-            tf.summary.histogram('action_probs', self.policy.dist.action_probs)
+            tf.summary.histogram('action_probs', self.policy.dist.action_probs_sy)
 
         if self.env_config['action_space'] == 'continuous':
             means = self.policy.dist.mean
@@ -138,6 +137,12 @@ class VanillaPGModel(BaseModel):
         merged = tf.summary.merge_all()
 
         return merged
+
+    def write_logs(self, sess, logger):
+        self.write_summaries(sess, self.placeholders_and_data)
+
+        entropy = sess.run(self.policy.entropy_sy, feed_dict=self.placeholders_and_data)
+        logger.add_log('Entropy', entropy)
 
     def write_summaries(self, sess, feed_dict):
         if self.merged is None:
@@ -161,4 +166,3 @@ class VanillaPGModel(BaseModel):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
                 loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
 
-        self.write_summaries(sess, self.placeholders_and_data)
