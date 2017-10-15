@@ -32,13 +32,8 @@ class PPOModel(VanillaPGModel):
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
         super()._fetch_placeholders_data_dict(sess, states, actions, returns)
         # Add old_logprob to feed_dict fetching
-        feed_dict = {
-            self.placeholders['states']: states,
-            self.placeholders['actions']: actions
-        }
-        old_logprob = sess.run(self.policy.logprob_sy, feed_dict=feed_dict)
+        old_logprob = sess.run(self.policy.logprob_sy, feed_dict=self.placeholders_and_data)
         self.placeholders_and_data[self.placeholders['old_logprob']] = old_logprob
-
 
     def fit(self, sess, states, actions, returns, learning_rate, **kwargs):
         super().fit(sess, states, actions, returns, learning_rate, **kwargs)
