@@ -35,6 +35,7 @@ class VanillaPGModel(BaseModel):
             if normalize_baseline:
                 self._normalize_baseline()
 
+        self.advantages = self._estimate_advantages()
         self._add_losses()
         self._create_training_op(self.placeholders['learning_rate'])
 
@@ -61,15 +62,14 @@ class VanillaPGModel(BaseModel):
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _pg_loss(self, policy):
-        advantages = self._estimate_advatanges()
-        loss = -tf.reduce_mean(policy.logprob_sy * advantages)
+        loss = -tf.reduce_mean(policy.logprob_sy * self.advantages)
         tf.losses.add_loss(loss)
 
     def _entropy_loss(self, policy, entropy_coef):
         loss = -(entropy_coef * policy.entropy_sy)
         tf.losses.add_loss(loss)
 
-    def _estimate_advatanges(self):
+    def _estimate_advantages(self):
         if self.use_baseline:
             advantages = self.placeholders['returns'] - self.baseline
         else:
@@ -123,6 +123,10 @@ class VanillaPGModel(BaseModel):
     def _create_summaries_op(self):
         self._maybe_create_writer()
 
+        if self.use_baseline:
+            tf.summary.histogram('baseline', self.baseline_sy)
+            tf.summary.scalar('baseline_mean', tf.reduce_mean(self.baseline_sy))
+
         if self.env_config['action_space'] == 'discrete':
             tf.summary.histogram('action_probs', self.policy.dist.action_probs_sy)
 
@@ -139,10 +143,10 @@ class VanillaPGModel(BaseModel):
         return merged
 
     def write_logs(self, sess, logger):
-        self.write_summaries(sess, self.placeholders_and_data)
-
         entropy = sess.run(self.policy.entropy_sy, feed_dict=self.placeholders_and_data)
         logger.add_log('Entropy', entropy)
+
+        self.write_summaries(sess, self.placeholders_and_data)
 
     def write_summaries(self, sess, feed_dict):
         if self.merged is None:
