@@ -13,7 +13,7 @@ class Policy:
             self.dist_function = CategoricalDist
             self.dist = CategoricalDist(params)
         elif env_config['action_space'] == 'continuous':
-            print('Making Continuous Policy')
+            print('Making Continuous Policy with scope ({})'.format(scope))
             self.dist_function = DiagGaussianDist
             self.dist = DiagGaussianDist(params,
                                          low_bound=env_config['action_low_bound'],
