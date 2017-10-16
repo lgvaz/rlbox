@@ -62,29 +62,34 @@ class VanillaPGModel(BaseModel):
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _pg_loss(self, policy):
-        loss = -tf.reduce_mean(policy.logprob_sy * self.advantages)
-        tf.losses.add_loss(loss)
+        with tf.variable_scope('pg_loss'):
+            loss = -tf.reduce_mean(policy.logprob_sy * self.advantages)
+            tf.losses.add_loss(loss)
 
     def _entropy_loss(self, policy, entropy_coef):
-        loss = -(entropy_coef * policy.entropy_sy)
-        tf.losses.add_loss(loss)
+        with tf.variable_scope('entropy_loss'):
+            loss = -(entropy_coef * policy.entropy_sy)
+            tf.losses.add_loss(loss)
 
     def _estimate_advantages(self):
-        if self.use_baseline:
-            advantages = self.placeholders['returns'] - self.baseline
-        else:
-            advantages = self.placeholders['returns']
+        with tf.variable_scope('advantages'):
+            if self.use_baseline:
+                advantages = self.placeholders['returns'] - self.baseline
+            else:
+                advantages = self.placeholders['returns']
 
-        if self.normalize_advantages:
-            advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
-            advs_std = advs_var ** 0.5
-            advantages = (advantages - advs_mean) / (advs_std + 1e-7)
+            with tf.variable_scope('normalize_advantages'):
+                if self.normalize_advantages:
+                    advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
+                    advs_std = advs_var ** 0.5
+                    advantages = (advantages - advs_mean) / (advs_std + 1e-7)
 
-        return advantages
+            return advantages
 
     def _baseline_loss(self, baseline_sy, targets):
-        loss = tf.losses.mean_squared_error(labels=targets, predictions=baseline_sy)
-        tf.losses.add_loss(loss)
+        with tf.variable_scope('baseline_loss'):
+            # This automatically adds the loss to the loss collection
+            loss = tf.losses.mean_squared_error(labels=targets, predictions=baseline_sy)
 
     def _create_baseline(self, value_graph):
         return value_graph(self.placeholders['states'])
@@ -94,16 +99,18 @@ class VanillaPGModel(BaseModel):
         self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
 
     def _normalize_baseline(self):
-        # Normalize target values for baseline
-        returns_mean, returns_var = tf.nn.moments(self.placeholders['returns'], axes=[0])
-        returns_std = returns_var ** 0.5
-        self.baseline_target = (self.placeholders['returns'] - returns_mean) / (returns_std + 1e-7)
+        with tf.variable_scope('normalize_baseline'):
+            # Normalize target values for baseline
+            returns_mean, returns_var = tf.nn.moments(self.placeholders['returns'], axes=[0])
+            returns_std = returns_var ** 0.5
+            self.baseline_target = ((self.placeholders['returns'] - returns_mean)
+                                    / (returns_std + 1e-7))
 
-        # Rescale baseline for same mean and variance of returns
-        baseline_mean, baseline_var = tf.nn.moments(self.baseline, axes=[0])
-        baseline_std = baseline_var ** 0.5
-        normalized_baseline = (self.baseline - baseline_mean) / (baseline_std + 1e-7)
-        self.baseline = normalized_baseline * returns_std + returns_mean
+            # Rescale baseline for same mean and variance of returns
+            baseline_mean, baseline_var = tf.nn.moments(self.baseline, axes=[0])
+            baseline_std = baseline_var ** 0.5
+            normalized_baseline = (self.baseline - baseline_mean) / (baseline_std + 1e-7)
+            self.baseline = normalized_baseline * returns_std + returns_mean
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
         '''
@@ -121,26 +128,28 @@ class VanillaPGModel(BaseModel):
             self.placeholders_and_data[self.placeholders['baseline']] = baseline
 
     def _create_summaries_op(self):
-        self._maybe_create_writer()
+        super()._create_summaries_op()
+        tf.summary.histogram('policy/logprob', self.policy.logprob_sy)
+        tf.summary.scalar('policy/logprob/mean', tf.reduce_mean(self.policy.logprob_sy))
 
         tf.summary.histogram('advantages', self.advantages)
-        tf.summary.scalar('advantages_max', tf.reduce_max(self.advantages))
-        tf.summary.scalar('advantages_min', tf.reduce_min(self.advantages))
+        tf.summary.scalar('advantages/max', tf.reduce_max(self.advantages))
+        tf.summary.scalar('advantages/min', tf.reduce_min(self.advantages))
 
         if self.use_baseline:
             tf.summary.histogram('baseline', self.baseline_sy)
-            tf.summary.scalar('baseline_mean', tf.reduce_mean(self.baseline_sy))
+            tf.summary.scalar('baseline/mean', tf.reduce_mean(self.baseline_sy))
 
         if self.env_config['action_space'] == 'discrete':
-            tf.summary.histogram('action_probs', self.policy.dist.action_probs_sy)
+            tf.summary.histogram('policy/action_probs', self.policy.dist.action_probs_sy)
 
         if self.env_config['action_space'] == 'continuous':
             means = self.policy.dist.mean
             stds = self.policy.dist.std
-            tf.summary.histogram('dist_means', means)
-            tf.summary.histogram('dist_standard_devs', stds)
-            tf.summary.scalar('dist_means_mean', tf.reduce_mean(means))
-            tf.summary.scalar('dist_standard_devs_mean', tf.reduce_mean(stds))
+            tf.summary.histogram('policy/means', means)
+            tf.summary.histogram('policy/standard_devs', stds)
+            tf.summary.scalar('policy/means/mean', tf.reduce_mean(means))
+            tf.summary.scalar('policy/standard_devs/mean', tf.reduce_mean(stds))
 
         merged = tf.summary.merge_all()
 

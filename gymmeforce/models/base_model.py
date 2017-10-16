@@ -42,6 +42,14 @@ class BaseModel:
         self.loss_sy = tf.losses.get_total_loss()
         self.training_op = opt(learning_rate, epsilon=1e-5).minimize(self.loss_sy)
 
+    def _create_summaries_op(self):
+        self._maybe_create_writer()
+        # Add all losses to the summary
+        losses = tf.losses.get_losses()
+        for tensor in losses:
+            name = '/'.join(['losses'] + tensor.name.split('/')[:-1])
+            tf.summary.scalar(name, tensor)
+
     def save(self, sess, name='model'):
         self._maybe_create_saver()
         save_path = os.path.join(self.log_dir, name)

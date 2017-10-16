@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def dense_value_graph(inputs, activation_fn=tf.nn.tanh, scope='value_graphs', reuse=None):
+def dense_value_graph(inputs, activation_fn=tf.nn.tanh, scope='value_graph', reuse=None):
     with tf.variable_scope(scope, reuse=reuse):
         net = inputs
         net = tf.contrib.layers.flatten(net)
