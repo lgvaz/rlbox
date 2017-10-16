@@ -54,7 +54,7 @@ class VanillaPGAgent(BatchAgent):
             states = np.concatenate([trajectory['states'] for trajectory in trajectories])
             actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
-            returns = np.concatenate([trajectory['returns'] for trajectory in trajectories]) 
+            returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
 
             # Update global step
             num_steps = len(rewards)

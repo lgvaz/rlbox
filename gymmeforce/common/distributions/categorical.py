@@ -12,10 +12,13 @@ class CategoricalDist:
         return tf.squeeze(tf.multinomial(self.logits, num_samples))
 
     def selected_logprob(self, actions):
-        one_hot_actions = tf.one_hot(actions, self.num_actions)
-        selected_logprob = tf.reduce_sum(one_hot_actions * self.logprob_sy, axis=1)
+        # one_hot_actions = tf.one_hot(actions, self.num_actions)
+        # selected_logprob = tf.reduce_sum(one_hot_actions * self.logprob_sy, axis=1)
+        selected_logprob = tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=self.logits,
+            labels=actions)
 
-        return selected_logprob
+        return -selected_logprob
 
     def entropy(self):
         return -tf.reduce_mean(tf.reduce_sum(tf.exp(self.logprob_sy) * self.logprob_sy, axis=1))

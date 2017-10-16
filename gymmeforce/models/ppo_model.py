@@ -25,13 +25,16 @@ class PPOModel(VanillaPGModel):
             self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _clipped_surrogate_loss(self, policy, epsilon_clip):
-        advantages = self._estimate_advatanges()
         prob_ratio = tf.exp(policy.logprob_sy - self.old_policy.logprob_sy)
+        print('PROB RATIO', prob_ratio)
+        # TODO: I don't think is correct to take mean here
+        # prob_ratio = tf.reduce_mean(prob_ratio, axis=1)
+        # prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
         clipped_prob_ratio = tf.clip_by_value(prob_ratio,
                                               1 - epsilon_clip,
                                               1 + epsilon_clip)
-        clipped_surrogate_losses = tf.minimum(prob_ratio * advantages,
-                                              clipped_prob_ratio * advantages)
+        clipped_surrogate_losses = tf.minimum(prob_ratio * self.advantages,
+                                              clipped_prob_ratio * self.advantages)
         clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
         tf.losses.add_loss(clipped_surrogate_loss)
@@ -39,13 +42,25 @@ class PPOModel(VanillaPGModel):
     def _update_old_policy(self, sess):
         sess.run(self.update_old_policy_op)
 
-    def write_logs(self, sess, logger):
-        self.write_summaries(sess, self.placeholders_and_data)
+    # def _set_placeholders_config(self):
+    #     super()._set_placeholders_config()
+    #     self.placeholders_config['old_logprob'] = [[None], tf.float32]
 
-        entropy, kl = sess.run([self.policy.entropy_sy, self.kl_divergence_sy],
+    # def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
+    #     super()._fetch_placeholders_data_dict(sess, states, actions, returns)
+    #     # Add old_logprob to feed_dict fetching
+    #     old_logprob = sess.run(self.policy.logprob_sy, feed_dict=self.placeholders_and_data)
+    #     self.placeholders_and_data[self.placeholders['old_logprob']] = old_logprob
+
+    def write_logs(self, sess, logger):
+        entropy, kl = sess.run([self.policy.entropy_sy,
+                                self.kl_divergence_sy],
                                feed_dict=self.placeholders_and_data)
+
         logger.add_log('Entropy', entropy)
         logger.add_log('KL Divergence', kl, precision=4)
+
+        self.write_summaries(sess, self.placeholders_and_data)
 
     def fit(self, sess, states, actions, returns, learning_rate, **kwargs):
         self._update_old_policy(sess)

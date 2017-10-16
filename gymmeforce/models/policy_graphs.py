@@ -19,6 +19,7 @@ def dense_policy_graph(inputs, env_config, activation_fn=tf.nn.tanh,
         if env_config['action_space'] == 'continuous':
             mean = tf.layers.dense(net, env_config['num_actions'],
                                    kernel_initializer=variance_scaling_initializer(factor=1),
+                                   name='mean',
                                    trainable=trainable)
             logstd = tf.get_variable('logstd', (1, env_config['num_actions']), tf.float32,
                                      initializer=tf.zeros_initializer(),
