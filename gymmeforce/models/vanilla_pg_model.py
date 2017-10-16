@@ -123,6 +123,10 @@ class VanillaPGModel(BaseModel):
     def _create_summaries_op(self):
         self._maybe_create_writer()
 
+        tf.summary.histogram('advantages', self.advantages)
+        tf.summary.scalar('advantages_max', tf.reduce_max(self.advantages))
+        tf.summary.scalar('advantages_min', tf.reduce_min(self.advantages))
+
         if self.use_baseline:
             tf.summary.histogram('baseline', self.baseline_sy)
             tf.summary.scalar('baseline_mean', tf.reduce_mean(self.baseline_sy))
