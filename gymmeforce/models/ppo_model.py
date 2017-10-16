@@ -8,14 +8,14 @@ class PPOModel(VanillaPGModel):
     def __init__(self, env_config, epsilon_clip=0.2, **kwargs):
         self.epsilon_clip = epsilon_clip
         super().__init__(env_config, **kwargs)
-        self._create_old_policy_update_op()
-        self._create_kl_divergence_op()
 
     def _create_policy(self, states_ph, actions_ph, policy_graph):
         self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph,
                              scope='policy')
         self.old_policy = Policy(self.env_config, states_ph, actions_ph, policy_graph,
                                  scope='old_policy', trainable=False)
+        self._create_old_policy_update_op()
+        self._create_kl_divergence_op()
 
     def _add_losses(self):
         self._clipped_surrogate_loss(self.policy, self.epsilon_clip)
@@ -27,9 +27,9 @@ class PPOModel(VanillaPGModel):
         with tf.variable_scope('L_clip'):
             with tf.variable_scope('prob_ratio'):
                 prob_ratio = tf.exp(policy.logprob_sy - self.old_policy.logprob_sy)
-            # TODO: I don't think is correct to take mean here
-            # prob_ratio = tf.reduce_mean(prob_ratio, axis=1)
-            # prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
+                # TODO: I don't think is correct to take mean here
+                # prob_ratio = tf.reduce_mean(prob_ratio, axis=1)
+                # prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
             clipped_prob_ratio = tf.clip_by_value(prob_ratio,
                                                   1 - epsilon_clip,
                                                   1 + epsilon_clip,
