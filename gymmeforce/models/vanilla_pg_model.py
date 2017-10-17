@@ -78,11 +78,13 @@ class VanillaPGModel(BaseModel):
             else:
                 advantages = self.placeholders['returns']
 
-            with tf.variable_scope('normalize_advantages'):
-                if self.normalize_advantages:
+            if self.normalize_advantages:
+                with tf.variable_scope('normalize_advantages'):
                     advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
                     advs_std = advs_var ** 0.5
-                    advantages = (advantages - advs_mean) / (advs_std + 1e-7)
+                    # advs_mean = tf.reduce_mean(advantages)
+                    # advs_std = tf.sqrt(tf.reduce_mean((advantages - advs_mean) ** 2))
+                    advantages = (advantages - advs_mean) / (advs_std + 1e-6)
 
             return advantages
 
@@ -151,10 +153,6 @@ class VanillaPGModel(BaseModel):
             tf.summary.scalar('policy/means/mean', tf.reduce_mean(means))
             tf.summary.scalar('policy/standard_devs/mean', tf.reduce_mean(stds))
 
-        merged = tf.summary.merge_all()
-
-        return merged
-
     def write_logs(self, sess, logger):
         entropy = sess.run(self.policy.entropy_sy, feed_dict=self.placeholders_and_data)
         logger.add_log('Entropy', entropy)
@@ -163,7 +161,8 @@ class VanillaPGModel(BaseModel):
 
     def write_summaries(self, sess, feed_dict):
         if self.merged is None:
-            self.merged = self._create_summaries_op()
+            self._create_summaries_op()
+            self.merged = tf.summary.merge_all()
         summary = sess.run(self.merged, feed_dict=feed_dict)
         self._writer.add_summary(summary, self.get_global_step(sess))
 
@@ -181,5 +180,6 @@ class VanillaPGModel(BaseModel):
         for i_epoch in range(num_epochs):
             for feed_dict in data.fetch_batch_dict(batch_size):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
-                loss, _ = sess.run([self.loss_sy, self.training_op], feed_dict=feed_dict)
+                kl, _ = sess.run([self.kl_divergence_sy, self.training_op], feed_dict=feed_dict)
+                # print(kl)
 
