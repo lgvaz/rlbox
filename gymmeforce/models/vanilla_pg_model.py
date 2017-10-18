@@ -180,6 +180,5 @@ class VanillaPGModel(BaseModel):
         for i_epoch in range(num_epochs):
             for feed_dict in data.fetch_batch_dict(batch_size):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
-                kl, _ = sess.run([self.kl_divergence_sy, self.training_op], feed_dict=feed_dict)
-                # print(kl)
+                sess.run([self.training_op], feed_dict=feed_dict)
 

@@ -1,7 +1,7 @@
+import numpy as np
 import tensorflow as tf
 from gymmeforce.common.policy import Policy
 from gymmeforce.models import VanillaPGModel
-import numpy as np
 from gymmeforce.common.utils import tf_copy_params_op
 
 
@@ -15,6 +15,7 @@ class PPOModel(VanillaPGModel):
                              scope='policy')
         self.old_policy = Policy(self.env_config, states_ph, actions_ph, policy_graph,
                                  scope='old_policy', trainable=False)
+
         self._create_old_policy_update_op()
         self._create_kl_divergence_op()
 
@@ -36,6 +37,7 @@ class PPOModel(VanillaPGModel):
         with tf.variable_scope('L_clip'):
             with tf.variable_scope('prob_ratio'):
                 self.prob_ratio = tf.exp(policy.logprob_sy - self.old_policy.logprob_sy)
+                # Alternatively we can use a placeholder to feed the old logprobs
                 # self.prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
             self.clipped_prob_ratio = tf.clip_by_value(self.prob_ratio,
                                                        1 - epsilon_clip,
@@ -54,6 +56,8 @@ class PPOModel(VanillaPGModel):
     def _update_old_policy(self, sess):
         sess.run(self.update_old_policy_op)
 
+    # This lines show an example of how to add an additional placeholder which
+    # will be fetched during the training operation
     # def _set_placeholders_config(self):
     #     super()._set_placeholders_config()
     #     self.placeholders_config['old_logprob'] = [[None], tf.float32]
@@ -61,18 +65,28 @@ class PPOModel(VanillaPGModel):
     # def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
     #     super()._fetch_placeholders_data_dict(sess, states, actions, returns)
     #     # Add old_logprob to feed_dict fetching
-    #     old_logprob = sess.run(self.policy.logprob_sy, feed_dict=self.placeholders_and_data)
+    #     old_logprob = sess.run(self.policy.logprob_sy,
+    #                            feed_dict=self.placeholders_and_data)
     #     self.placeholders_and_data[self.placeholders['old_logprob']] = old_logprob
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
+
         tf.summary.histogram('policy/prob_ratio', self.prob_ratio)
-        tf.summary.scalar('policy/prob_ratio/max', tf.reduce_max(self.prob_ratio))
-        tf.summary.scalar('policy/prob_ratio/min', tf.reduce_min(self.prob_ratio))
+        tf.summary.scalar('policy/prob_ratio/mean',
+                          tf.reduce_mean(self.prob_ratio))
+        tf.summary.scalar('policy/prob_ratio/max',
+                          tf.reduce_max(self.prob_ratio))
+        tf.summary.scalar('policy/prob_ratio/min',
+                          tf.reduce_min(self.prob_ratio))
 
         tf.summary.histogram('policy/clipped_prob_ratio', self.clipped_prob_ratio)
-        tf.summary.scalar('policy/clipped_prob_ratio/max', tf.reduce_max(self.clipped_prob_ratio))
-        tf.summary.scalar('policy/clipped_prob_ratio/min', tf.reduce_min(self.clipped_prob_ratio))
+        tf.summary.scalar('policy/clipped_prob_ratio/mean',
+                          tf.reduce_mean(self.clipped_prob_ratio))
+        tf.summary.scalar('policy/clipped_prob_ratio/max',
+                          tf.reduce_max(self.clipped_prob_ratio))
+        tf.summary.scalar('policy/clipped_prob_ratio/min',
+                          tf.reduce_min(self.clipped_prob_ratio))
 
     def write_logs(self, sess, logger):
         entropy, kl = sess.run([self.policy.entropy_sy,

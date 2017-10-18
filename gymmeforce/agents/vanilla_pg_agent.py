@@ -4,9 +4,8 @@ import numpy as np
 import tensorflow as tf
 import itertools
 from gymmeforce.agents import BatchAgent
-# from gymmeforce.models.vanilla_pg_model2 import VanillaPGModel
 from gymmeforce.models import VanillaPGModel
-from gymmeforce.models import PPOModel
+
 
 class VanillaPGAgent(BatchAgent):
     '''

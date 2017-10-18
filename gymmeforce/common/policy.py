@@ -9,7 +9,8 @@ class Policy:
             self.states_ph = states_ph
             self.actions_ph = actions_ph
 
-            params = graph(states_ph, env_config, scope='graph', reuse=reuse, trainable=trainable)
+            params = graph(states_ph, env_config, scope='graph',
+                           reuse=reuse, trainable=trainable)
             if env_config['action_space'] == 'discrete':
                 print('Making Discrete Policy with scope ({})'.format(scope))
                 self.dist_function = CategoricalDist
