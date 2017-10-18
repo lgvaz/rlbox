@@ -92,9 +92,14 @@ class PPOModel(VanillaPGModel):
         entropy, kl = sess.run([self.policy.entropy_sy,
                                 self.kl_divergence_sy],
                                feed_dict=self.placeholders_and_data)
-
         logger.add_log('policy/Entropy', entropy)
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
+
+        if self.use_baseline:
+            y_pred = self.placeholders_and_data[self.placeholders['baseline']]
+            y_true = self.placeholders_and_data[self.placeholders['returns']]
+            explained_variance = np.var(y_true - y_pred) / np.var(y_true)
+            logger.add_log('baseline/Explained Variance', explained_variance)
 
         self.write_summaries(sess, self.placeholders_and_data)
 
