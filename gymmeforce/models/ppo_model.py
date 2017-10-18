@@ -31,7 +31,7 @@ class PPOModel(VanillaPGModel):
         self._clipped_surrogate_loss(self.policy, self.epsilon_clip)
         self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
-            self._baseline_loss(self.baseline_sy, self.baseline_target)
+            self._baseline_loss(self.value_fn_sy, self.value_fn_target)
 
     def _clipped_surrogate_loss(self, policy, epsilon_clip):
         with tf.variable_scope('L_clip'):
@@ -45,9 +45,9 @@ class PPOModel(VanillaPGModel):
                                                        name='clipped_prob_ratio')
             with tf.variable_scope('clipped_surrogate_loss'):
                 with tf.variable_scope('surrogate_objective'):
-                    surrogate = self.prob_ratio * self.advantages
+                    surrogate = self.prob_ratio * self.placeholders['advantages']
                 with tf.variable_scope('clipped_surrogate_objective'):
-                    clipped_surrogate = self.clipped_prob_ratio * self.advantages
+                    clipped_surrogate = self.clipped_prob_ratio * self.placeholders['advantages']
                 clipped_surrogate_losses = tf.minimum(surrogate, clipped_surrogate)
                 clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
@@ -96,7 +96,7 @@ class PPOModel(VanillaPGModel):
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
 
         if self.use_baseline:
-            y_pred = self.placeholders_and_data[self.placeholders['baseline']]
+            y_pred = sess.run(self.baseline_sy, feed_dict=self.placeholders_and_data)
             y_true = self.placeholders_and_data[self.placeholders['returns']]
             explained_variance = np.var(y_true - y_pred) / np.var(y_true)
             logger.add_log('baseline/Explained Variance', explained_variance)

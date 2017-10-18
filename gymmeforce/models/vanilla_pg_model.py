@@ -29,13 +29,12 @@ class VanillaPGModel(BaseModel):
                             self.policy_graph)
 
         if self.use_baseline:
-            self.baseline_sy = self._create_baseline(self.value_graph)
-            self.baseline_target = self.placeholders['returns']
-            self.baseline = self.placeholders['baseline']
+            self.value_fn_sy = self._create_baseline(self.value_graph)
+            self.baseline_sy = self.value_fn_sy
+            self.value_fn_target = self.placeholders['returns']
             if normalize_baseline:
                 self._normalize_baseline()
 
-        self.advantages = self._estimate_advantages()
         self._add_losses()
         self._create_training_op(self.placeholders['learning_rate'])
 
@@ -45,7 +44,7 @@ class VanillaPGModel(BaseModel):
             'states': [[None] + list(self.env_config['state_shape']),
                        self.env_config['input_type']],
             'returns': [[None], tf.float32],
-            'baseline': [[None], tf.float32],
+            'advantages': [[None], tf.float32],
             'learning_rate': [[], tf.float32]
         }
         if self.env_config['action_space'] == 'discrete':
@@ -59,11 +58,11 @@ class VanillaPGModel(BaseModel):
         self._pg_loss(self.policy)
         self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
-            self._baseline_loss(self.baseline_sy, self.baseline_target)
+            self._baseline_loss(self.value_fn_sy, self.value_fn_target)
 
     def _pg_loss(self, policy):
         with tf.variable_scope('pg_loss'):
-            loss = -tf.reduce_mean(policy.logprob_sy * self.advantages)
+            loss = -tf.reduce_mean(policy.logprob_sy * self.placeholders['advantages'])
             tf.losses.add_loss(loss)
 
     def _entropy_loss(self, policy, entropy_coef):
@@ -74,7 +73,7 @@ class VanillaPGModel(BaseModel):
     def _estimate_advantages(self):
         with tf.variable_scope('advantages'):
             if self.use_baseline:
-                advantages = self.placeholders['returns'] - self.baseline
+                advantages = self.placeholders['returns'] - self.baseline_sy
             else:
                 advantages = self.placeholders['returns']
 
@@ -100,19 +99,20 @@ class VanillaPGModel(BaseModel):
                        scope='policy', reuse=None):
         self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
 
+    # TODO: FIX self.baseline is deprecated
     def _normalize_baseline(self):
         with tf.variable_scope('normalize_baseline'):
             # Normalize target values for baseline
             returns_mean, returns_var = tf.nn.moments(self.placeholders['returns'], axes=[0])
             returns_std = returns_var ** 0.5
-            self.baseline_target = ((self.placeholders['returns'] - returns_mean)
+            self.value_fn_target = ((self.placeholders['returns'] - returns_mean)
                                     / (returns_std + 1e-7))
 
             # Rescale baseline for same mean and variance of returns
-            baseline_mean, baseline_var = tf.nn.moments(self.baseline, axes=[0])
+            baseline_mean, baseline_var = tf.nn.moments(self.baseline_sy, axes=[0])
             baseline_std = baseline_var ** 0.5
-            normalized_baseline = (self.baseline - baseline_mean) / (baseline_std + 1e-7)
-            self.baseline = normalized_baseline * returns_std + returns_mean
+            normalized_baseline = (self.baseline_sy - baseline_mean) / (baseline_std + 1e-7)
+            self.baseline_sy = normalized_baseline * returns_std + returns_mean
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
         '''
@@ -124,19 +124,20 @@ class VanillaPGModel(BaseModel):
             self.placeholders['actions']: actions,
             self.placeholders['returns']: returns
         }
-        # Calculate baseline
-        if self.use_baseline:
-            baseline = self.compute_baseline(sess, states)
-            self.placeholders_and_data[self.placeholders['baseline']] = baseline
+        # Calculate advantages
+        advantages_sy = self._estimate_advantages()
+        advantages = sess.run(advantages_sy, feed_dict=self.placeholders_and_data)
+        self.placeholders_and_data[self.placeholders['advantages']] = advantages
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
         tf.summary.histogram('policy/logprob', self.policy.logprob_sy)
         tf.summary.scalar('policy/logprob/mean', tf.reduce_mean(self.policy.logprob_sy))
 
-        tf.summary.histogram('advantages', self.advantages)
-        tf.summary.scalar('advantages/max', tf.reduce_max(self.advantages))
-        tf.summary.scalar('advantages/min', tf.reduce_min(self.advantages))
+        advantages = self.placeholders['advantages']
+        tf.summary.histogram('advantages', advantages)
+        tf.summary.scalar('advantages/max', tf.reduce_max(advantages))
+        tf.summary.scalar('advantages/min', tf.reduce_min(advantages))
 
         if self.use_baseline:
             tf.summary.histogram('baseline', self.baseline_sy)
@@ -158,10 +159,10 @@ class VanillaPGModel(BaseModel):
         logger.add_log('policy/Entropy', entropy)
 
         if self.use_baseline:
-            y_pred = self.placeholders_and_data[self.placeholders['baseline']]
+            y_pred = sess.run(self.baseline_sy, feed_dict=self.placeholders_and_data)
             y_true = self.placeholders_and_data[self.placeholders['returns']]
             explained_variance = np.var(y_true - y_pred) / np.var(y_true)
-            logger.add_log('baseline/Explained Variance')
+            logger.add_log('baseline/Explained Variance', explained_variance)
 
         self.write_summaries(sess, self.placeholders_and_data)
 
