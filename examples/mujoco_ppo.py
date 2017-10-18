@@ -1,8 +1,9 @@
 from gymmeforce.agents import PPOAgent
 
-env_name = 'LunarLander-v2'
+env_name = 'Hopper-v1'
 # log_dir = 'logs/walker2d/ppo/3e4lr_02clip_00entropy_na_ub_nb_400len_5000batch_10epochs_v0'
-log_dir = 'logs/lunar_lander/ppo/1e3lr_02clip_00entropy_na_ub_nb_2000batch_10epochs_v0'
+# log_dir = 'logs/lunar_lander/ppo/1e3lr_02clip_00entropy_na_ub_nb_2000batch_10epochs_v0'
+log_dir = 'tests/hopper/na_ub_dnb_phadvantages_v1'
 
 agent = PPOAgent(env_name,
                  log_dir=log_dir,
@@ -10,16 +11,16 @@ agent = PPOAgent(env_name,
                  entropy_coef=0.0,
                  normalize_advantages=True,
                  use_baseline=True,
-                 normalize_baseline=True)
+                 normalize_baseline=False)
 
-agent.train(1e-3,
+agent.train(5e-3,
             # max_steps=1e7,
-            max_iters=100,
+            max_iters=1e6,
             # max_episode_steps=400,
-            timesteps_per_batch=2000,
+            timesteps_per_batch=5000,
             num_epochs=10,
-            batch_size=64,
-            record_freq=None)
+            batch_size=128,
+            record_freq=1000)
 
 
 # agent = PPOAgent('InvertedDoublePendulum-v1',
