@@ -8,13 +8,10 @@ from gymmeforce.common.data_gen import DataGenerator
 
 
 class VanillaPGModel(BaseModel):
-    def __init__(self, env_config, normalize_advantages=False, use_baseline=True,
-                 normalize_baseline=False, entropy_coef=0.0, policy_graph=None,
-                 value_graph=None, **kwargs):
+    def __init__(self, env_config, use_baseline=True, entropy_coef=0.0,
+                 policy_graph=None, value_graph=None, **kwargs):
         super(VanillaPGModel, self).__init__(env_config, **kwargs)
-        self.normalize_advantages = normalize_advantages
         self.use_baseline = use_baseline
-        self.normalize_baseline = normalize_baseline
         self.entropy_coef = entropy_coef
 
         if policy_graph == None:
@@ -29,11 +26,8 @@ class VanillaPGModel(BaseModel):
                             self.policy_graph)
 
         if self.use_baseline:
-            self.value_fn_sy = self._create_baseline(self.value_graph)
-            self.baseline_sy = self.value_fn_sy
-            self.value_fn_target = self.placeholders['returns']
-            if normalize_baseline:
-                self._normalize_baseline()
+            self.baseline_sy = self._create_baseline(self.value_graph)
+            self.baseline_target = self.placeholders['returns']
 
         self._add_losses()
         self._create_training_op(self.placeholders['learning_rate'])
@@ -58,7 +52,7 @@ class VanillaPGModel(BaseModel):
         self._pg_loss(self.policy)
         self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
-            self._baseline_loss(self.value_fn_sy, self.value_fn_target)
+            self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _pg_loss(self, policy):
         with tf.variable_scope('pg_loss'):
@@ -69,23 +63,6 @@ class VanillaPGModel(BaseModel):
         with tf.variable_scope('entropy_loss'):
             loss = -(entropy_coef * policy.entropy_sy)
             tf.losses.add_loss(loss)
-
-    def _estimate_advantages(self):
-        with tf.variable_scope('advantages'):
-            if self.use_baseline:
-                advantages = self.placeholders['returns'] - self.baseline_sy
-            else:
-                advantages = self.placeholders['returns']
-
-            if self.normalize_advantages:
-                with tf.variable_scope('normalize_advantages'):
-                    advs_mean, advs_var = tf.nn.moments(advantages, axes=[0])
-                    advs_std = advs_var ** 0.5
-                    # advs_mean = tf.reduce_mean(advantages)
-                    # advs_std = tf.sqrt(tf.reduce_mean((advantages - advs_mean) ** 2))
-                    advantages = (advantages - advs_mean) / (advs_std + 1e-6)
-
-            return advantages
 
     def _baseline_loss(self, baseline_sy, targets):
         with tf.variable_scope('baseline_loss'):
@@ -98,21 +75,6 @@ class VanillaPGModel(BaseModel):
     def _create_policy(self, states_ph, actions_ph, policy_graph,
                        scope='policy', reuse=None):
         self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
-
-    # TODO: FIX self.baseline is deprecated
-    def _normalize_baseline(self):
-        with tf.variable_scope('normalize_baseline'):
-            # Normalize target values for baseline
-            returns_mean, returns_var = tf.nn.moments(self.placeholders['returns'], axes=[0])
-            returns_std = returns_var ** 0.5
-            self.value_fn_target = ((self.placeholders['returns'] - returns_mean)
-                                    / (returns_std + 1e-7))
-
-            # Rescale baseline for same mean and variance of returns
-            baseline_mean, baseline_var = tf.nn.moments(self.baseline_sy, axes=[0])
-            baseline_std = baseline_var ** 0.5
-            normalized_baseline = (self.baseline_sy - baseline_mean) / (baseline_std + 1e-7)
-            self.baseline_sy = normalized_baseline * returns_std + returns_mean
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
         '''
@@ -185,4 +147,3 @@ class VanillaPGModel(BaseModel):
             for feed_dict in data.fetch_batch_dict(batch_size):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
                 sess.run([self.training_op], feed_dict=feed_dict)
-

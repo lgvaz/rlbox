@@ -5,6 +5,7 @@ import tensorflow as tf
 import itertools
 from gymmeforce.agents import BatchAgent
 from gymmeforce.models import VanillaPGModel
+from gymmeforce.common.utils import discounted_sum_rewards
 
 
 class VanillaPGAgent(BatchAgent):
@@ -18,8 +19,6 @@ class VanillaPGAgent(BatchAgent):
         normalize_advantages: Whether or not to normalize advantages (default False)
         use_baseline: Whether or not to subtract a baseline(NN representing the
             value function) from the returns (default True)
-        normalize_baseline: Whether or not to normalize baseline (baseline values are rescaled
-            to have the same mean and variance of the returns) (default False)
         entropy_coef: Entropy penalty added to the loss (default 0.0)
         policy_graph: Function returning a tensorflow graph representing the policy
             (default None)
@@ -27,20 +26,29 @@ class VanillaPGAgent(BatchAgent):
             (default None)
         log_dir: Directory used for writing logs (default 'logs/examples')
     '''
-    def __init__(self, env_name, **kwargs):
+    def __init__(self, env_name, normalize_advantages, **kwargs):
         super(VanillaPGAgent, self).__init__(env_name, **kwargs)
         self.model = self._create_model(**kwargs)
-        self.normalize_advantages = kwargs.get('normalize_advantages', False)
-        print('NORMALIZE?', self.normalize_advantages)
+        self.normalize_advantages = normalize_advantages
 
     def _create_model(self, **kwargs):
         return VanillaPGModel(self.env_config, **kwargs)
 
+    def _add_discounted_returns(self, trajectory, gamma):
+        discounted_returns = discounted_sum_rewards(trajectory['rewards'], gamma)
+        trajectory['returns'] = discounted_returns
+
+    def _add_generalized_advantage_estimation(self, trajectory, gamma, gae_lambda):
+        assert self.model.use_baseline, 'GAE can only be used with baseline'
+        baseline = self.model.compute_baseline(self.sess, trajectory['states'])
+        tds = trajectory['rewards'] + gamma * np.append(baseline[1:], 0) - baseline
+        trajectory['advantages'] = discounted_sum_rewards(tds, gamma * gae_lambda)
+
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1,
-              rew_discount_factor=0.99, timesteps_per_batch=2000, num_epochs=1,
+    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, use_gae=True,
+              gamma=0.99, gae_lambda=0.96, timesteps_per_batch=2000, num_epochs=1,
               batch_size=64, record_freq=None, max_episode_steps=None):
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
@@ -50,15 +58,25 @@ class VanillaPGAgent(BatchAgent):
 
         for i_iter in itertools.count():
             # Generate policy rollouts
-            trajectories = self.generate_batch(env, timesteps_per_batch,
-                                               gamma=rew_discount_factor)
+            trajectories = self.generate_batch(env, timesteps_per_batch)
+            for trajectory in trajectories:
+                self._add_discounted_returns(trajectory, gamma)
+                if use_gae:
+                    self._add_generalized_advantage_estimation(trajectory, gamma, gae_lambda)
+                else:
+                    if self.model.use_baseline:
+                        baseline = self.model.compute_baseline(self.sess,
+                                                               trajectory['states'])
+                        trajectory['advantages'] = trajectory['returns'] - baseline
+                    else:
+                        trajectory['advantages'] = trajectory['returns']
+
             states = np.concatenate([trajectory['states'] for trajectory in trajectories])
             actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
             returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
+            advantages = np.concatenate([trajectory['advantages'] for trajectory in trajectories])
 
-            baseline = self.model.compute_baseline(self.sess, states)
-            advantages = returns - baseline
             if self.normalize_advantages:
                 advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-7)
 

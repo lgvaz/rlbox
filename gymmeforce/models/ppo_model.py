@@ -31,7 +31,7 @@ class PPOModel(VanillaPGModel):
         self._clipped_surrogate_loss(self.policy, self.epsilon_clip)
         self._entropy_loss(self.policy, self.entropy_coef)
         if self.use_baseline:
-            self._baseline_loss(self.value_fn_sy, self.value_fn_target)
+            self._baseline_loss(self.baseline_sy, self.baseline_target)
 
     def _clipped_surrogate_loss(self, policy, epsilon_clip):
         with tf.variable_scope('L_clip'):

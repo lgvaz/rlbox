@@ -21,8 +21,6 @@ class PPOAgent(VanillaPGAgent):
         normalize_advantages: Whether or not to normalize advantages (default False)
         use_baseline: Whether or not to subtract a baseline(NN representing the
             value function) from the returns (default True)
-        normalize_baseline: Whether or not to normalize baseline (baseline values are rescaled
-            to have the same mean and variance of the returns) (default False)
         entropy_coef: Entropy penalty added to the loss (default 0.0)
         policy_graph: Function returning a tensorflow graph representing the policy
             (default None)
