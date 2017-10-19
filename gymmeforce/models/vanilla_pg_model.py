@@ -114,7 +114,7 @@ class VanillaPGModel(BaseModel):
             normalized_baseline = (self.baseline_sy - baseline_mean) / (baseline_std + 1e-7)
             self.baseline_sy = normalized_baseline * returns_std + returns_mean
 
-    def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
+    def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
         '''
         Create a dictionary mapping placeholders to their correspondent value
         Modify this method to include new placeholders to feed_dict used by training_op
@@ -122,12 +122,9 @@ class VanillaPGModel(BaseModel):
         self.placeholders_and_data = {
             self.placeholders['states']: states,
             self.placeholders['actions']: actions,
-            self.placeholders['returns']: returns
+            self.placeholders['returns']: returns,
+            self.placeholders['advantages']: advantages
         }
-        # Calculate advantages
-        advantages_sy = self._estimate_advantages()
-        advantages = sess.run(advantages_sy, feed_dict=self.placeholders_and_data)
-        self.placeholders_and_data[self.placeholders['advantages']] = advantages
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
@@ -179,9 +176,9 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    def fit(self, sess, states, actions, returns, learning_rate,
+    def fit(self, sess, states, actions, returns, advantages, learning_rate,
             num_epochs=10, batch_size=64, logger=None):
-        self._fetch_placeholders_data_dict(sess, states, actions, returns)
+        self._fetch_placeholders_data_dict(sess, states, actions, returns, advantages)
         data = DataGenerator(self.placeholders_and_data)
 
         for i_epoch in range(num_epochs):

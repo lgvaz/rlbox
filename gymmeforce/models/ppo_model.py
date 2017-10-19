@@ -103,6 +103,6 @@ class PPOModel(VanillaPGModel):
 
         self.write_summaries(sess, self.placeholders_and_data)
 
-    def fit(self, sess, states, actions, returns, learning_rate, **kwargs):
+    def fit(self, sess, *args, **kwargs):
         self._update_old_policy(sess)
-        super().fit(sess, states, actions, returns, learning_rate, **kwargs)
+        super().fit(sess, *args, **kwargs)

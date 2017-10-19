@@ -30,6 +30,8 @@ class VanillaPGAgent(BatchAgent):
     def __init__(self, env_name, **kwargs):
         super(VanillaPGAgent, self).__init__(env_name, **kwargs)
         self.model = self._create_model(**kwargs)
+        self.normalize_advantages = kwargs.get('normalize_advantages', False)
+        print('NORMALIZE?', self.normalize_advantages)
 
     def _create_model(self, **kwargs):
         return VanillaPGModel(self.env_config, **kwargs)
@@ -55,11 +57,16 @@ class VanillaPGAgent(BatchAgent):
             rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
             returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
 
+            baseline = self.model.compute_baseline(self.sess, states)
+            advantages = returns - baseline
+            if self.normalize_advantages:
+                advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-7)
+
             # Update global step
             num_steps = len(rewards)
             self.model.increase_global_step(self.sess, num_steps)
 
-            self.model.fit(self.sess, states, actions, returns, learning_rate,
+            self.model.fit(self.sess, states, actions, returns, advantages, learning_rate,
                            num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
 
             # Logs
