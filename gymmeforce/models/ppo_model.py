@@ -10,11 +10,14 @@ class PPOModel(VanillaPGModel):
         self.epsilon_clip = epsilon_clip
         super().__init__(env_config, **kwargs)
 
-    def _create_policy(self, states_ph, actions_ph, policy_graph):
-        self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph,
-                             scope='policy')
-        self.old_policy = Policy(self.env_config, states_ph, actions_ph, policy_graph,
-                                 scope='old_policy', trainable=False)
+    def _create_policy(self):
+        super()._create_policy()
+        self.old_policy = Policy(self.env_config,
+                                 states_ph=self.placeholders['states'],
+                                 actions_ph=self.placeholders['actions'],
+                                 graph=self.policy_graph,
+                                 scope='old_policy',
+                                 trainable=False)
 
         self._create_old_policy_update_op()
         self._create_kl_divergence_op()
@@ -28,20 +31,20 @@ class PPOModel(VanillaPGModel):
                                                           to_scope='old_policy')
 
     def _add_losses(self):
-        self._clipped_surrogate_loss(self.policy, self.epsilon_clip)
-        self._entropy_loss(self.policy, self.entropy_coef)
+        self._clipped_surrogate_loss()
+        self._entropy_loss()
         if self.use_baseline:
-            self._baseline_loss(self.baseline_sy, self.baseline_target)
+            self._baseline_loss()
 
-    def _clipped_surrogate_loss(self, policy, epsilon_clip):
+    def _clipped_surrogate_loss(self):
         with tf.variable_scope('L_clip'):
             with tf.variable_scope('prob_ratio'):
-                self.prob_ratio = tf.exp(policy.logprob_sy - self.old_policy.logprob_sy)
+                self.prob_ratio = tf.exp(self.policy.logprob_sy - self.old_policy.logprob_sy)
                 # Alternatively we can use a placeholder to feed the old logprobs
                 # self.prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
             self.clipped_prob_ratio = tf.clip_by_value(self.prob_ratio,
-                                                       1 - epsilon_clip,
-                                                       1 + epsilon_clip,
+                                                       1 - self.epsilon_clip,
+                                                       1 + self.epsilon_clip,
                                                        name='clipped_prob_ratio')
             with tf.variable_scope('clipped_surrogate_loss'):
                 with tf.variable_scope('surrogate_objective'):

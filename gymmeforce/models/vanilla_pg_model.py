@@ -21,12 +21,10 @@ class VanillaPGModel(BaseModel):
 
         self._set_placeholders_config()
         self._create_placeholders(self.placeholders_config)
-        self._create_policy(self.placeholders['states'],
-                            self.placeholders['actions'],
-                            self.policy_graph)
+        self._create_policy()
 
         if self.use_baseline:
-            self.baseline_sy = self._create_baseline(self.value_graph)
+            self.baseline_sy = self._create_baseline()
             self.baseline_target = self.placeholders['returns']
 
         self._add_losses()
@@ -49,32 +47,36 @@ class VanillaPGModel(BaseModel):
 
     def _add_losses(self):
         ''' Modify this method to add new losses e.g. KL penalty '''
-        self._pg_loss(self.policy)
-        self._entropy_loss(self.policy, self.entropy_coef)
+        self._pg_loss()
+        self._entropy_loss()
         if self.use_baseline:
-            self._baseline_loss(self.baseline_sy, self.baseline_target)
+            self._baseline_loss()
 
-    def _pg_loss(self, policy):
+    def _pg_loss(self):
         with tf.variable_scope('pg_loss'):
-            loss = -tf.reduce_mean(policy.logprob_sy * self.placeholders['advantages'])
+            loss = -tf.reduce_mean(self.policy.logprob_sy * self.placeholders['advantages'])
             tf.losses.add_loss(loss)
 
-    def _entropy_loss(self, policy, entropy_coef):
+    def _entropy_loss(self):
         with tf.variable_scope('entropy_loss'):
-            loss = -(entropy_coef * policy.entropy_sy)
+            loss = -(self.entropy_coef * self.policy.entropy_sy)
             tf.losses.add_loss(loss)
 
-    def _baseline_loss(self, baseline_sy, targets):
+    def _baseline_loss(self):
         with tf.variable_scope('baseline_loss'):
             # This automatically adds the loss to the loss collection
-            loss = tf.losses.mean_squared_error(labels=targets, predictions=baseline_sy)
+            loss = tf.losses.mean_squared_error(labels=self.baseline_target,
+                                                predictions=self.baseline_sy)
 
-    def _create_baseline(self, value_graph):
-        return value_graph(self.placeholders['states'])
+    def _create_baseline(self):
+        return self.value_graph(self.placeholders['states'])
 
-    def _create_policy(self, states_ph, actions_ph, policy_graph,
-                       scope='policy', reuse=None):
-        self.policy = Policy(self.env_config, states_ph, actions_ph, policy_graph)
+    def _create_policy(self):
+        self.policy = Policy(self.env_config,
+                             states_ph=self.placeholders['states'],
+                             actions_ph=self.placeholders['actions'],
+                             graph=self.policy_graph,
+                             scope='policy')
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
         '''
