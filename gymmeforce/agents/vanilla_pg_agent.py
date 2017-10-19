@@ -48,7 +48,7 @@ class VanillaPGAgent(BatchAgent):
         return self.model.select_action(self.sess, state)
 
     def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, use_gae=True,
-              gamma=0.99, gae_lambda=0.96, timesteps_per_batch=2000, num_epochs=1,
+              gamma=0.99, gae_lambda=0.95, timesteps_per_batch=2000, num_epochs=1,
               batch_size=64, record_freq=None, max_episode_steps=None):
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
