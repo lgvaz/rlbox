@@ -39,8 +39,8 @@ class BaseModel:
 
     def _create_training_op(self, learning_rate, opt=tf.train.AdamOptimizer):
         # TODO: Change to do grad clipping and stuff
-        self.loss_sy = tf.losses.get_total_loss()
-        self.training_op = opt(learning_rate, epsilon=1e-5).minimize(self.loss_sy)
+        loss_sy = tf.losses.get_total_loss()
+        self.training_op = opt(learning_rate, epsilon=1e-5).minimize(loss_sy)
 
     def _create_summaries_op(self):
         self._maybe_create_writer()
