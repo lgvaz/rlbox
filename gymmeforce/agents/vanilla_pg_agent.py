@@ -34,22 +34,32 @@ class VanillaPGAgent(BatchAgent):
     def _create_model(self, **kwargs):
         return VanillaPGModel(self.env_config, **kwargs)
 
-    def _add_discounted_returns(self, trajectory, gamma):
-        discounted_returns = discounted_sum_rewards(trajectory['rewards'], gamma)
+    def _add_discounted_returns(self, trajectory):
+        discounted_returns = discounted_sum_rewards(trajectory['rewards'], self.gamma)
         trajectory['returns'] = discounted_returns
 
-    def _add_generalized_advantage_estimation(self, trajectory, gamma, gae_lambda):
-        assert self.model.use_baseline, 'GAE can only be used with baseline'
-        baseline = self.model.compute_baseline(self.sess, trajectory['states'])
-        tds = trajectory['rewards'] + gamma * np.append(baseline[1:], 0) - baseline
-        trajectory['advantages'] = discounted_sum_rewards(tds, gamma * gae_lambda)
+    def _add_advantages_and_vtarget(self, trajectory):
+        if self.model.use_baseline:
+            # This is the classical way to fir vtarget (directly by the return)
+            # TODO: Should a option to bootstrap be added?
+            trajectory['baseline_target'] = trajectory['returns']
+            baseline = self.model.compute_baseline(self.sess, trajectory['states'])
+            trajectory['advantages'] = trajectory['returns'] - baseline
+        else:
+            trajectory['advantages'] = trajectory['returns']
+
+    def _normalize_advantages(self, trajectory):
+        mean_adv = np.mean(trajectory['advantages'])
+        std_adv = np.std(trajectory['advantages'])
+        trajectory['advantages'] = (trajectory['advantages'] - mean_adv) / (std_adv + 1e-7)
 
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1, use_gae=True,
-              gamma=0.99, gae_lambda=0.95, timesteps_per_batch=2000, num_epochs=1,
+    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1,
+              gamma=0.99, timesteps_per_batch=2000, num_epochs=1,
               batch_size=64, record_freq=None, max_episode_steps=None):
+        self.gamma = gamma
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
         monitored_env, env = self._create_env(monitor_dir='videos/train',
@@ -60,31 +70,25 @@ class VanillaPGAgent(BatchAgent):
             # Generate policy rollouts
             trajectories = self.generate_batch(env, timesteps_per_batch)
             for trajectory in trajectories:
-                self._add_discounted_returns(trajectory, gamma)
-                if use_gae:
-                    self._add_generalized_advantage_estimation(trajectory, gamma, gae_lambda)
-                else:
-                    if self.model.use_baseline:
-                        baseline = self.model.compute_baseline(self.sess,
-                                                               trajectory['states'])
-                        trajectory['advantages'] = trajectory['returns'] - baseline
-                    else:
-                        trajectory['advantages'] = trajectory['returns']
+                self._add_discounted_returns(trajectory)
+                self._add_advantages_and_vtarget(trajectory)
+                if self.normalize_advantages:
+                    self._normalize_advantages(trajectory)
 
-            states = np.concatenate([trajectory['states'] for trajectory in trajectories])
-            actions = np.concatenate([trajectory['actions'] for trajectory in trajectories])
-            rewards = np.concatenate([trajectory['rewards'] for trajectory in trajectories])
-            returns = np.concatenate([trajectory['returns'] for trajectory in trajectories])
-            advantages = np.concatenate([trajectory['advantages'] for trajectory in trajectories])
+            states = np.concatenate([traj['states'] for traj in trajectories])
+            actions = np.concatenate([traj['actions'] for traj in trajectories])
+            rewards = np.concatenate([traj['rewards'] for traj in trajectories])
+            returns = np.concatenate([traj['returns'] for traj in trajectories])
+            advantages = np.concatenate([traj['advantages'] for traj in trajectories])
+            # CHANGE IT TO VTARG FOR FUCK SAKE
+            baseline_targets = np.concatenate([traj['baseline_target'] for traj in trajectories])
 
-            if self.normalize_advantages:
-                advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-7)
 
             # Update global step
             num_steps = len(rewards)
             self.model.increase_global_step(self.sess, num_steps)
 
-            self.model.fit(self.sess, states, actions, returns, advantages, learning_rate,
+            self.model.fit(self.sess, states, actions, baseline_targets, advantages, learning_rate,
                            num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
 
             # Logs

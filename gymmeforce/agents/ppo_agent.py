@@ -1,7 +1,7 @@
-from gymmeforce.agents import VanillaPGAgent
+from gymmeforce.agents import ActorCriticAgent
 from gymmeforce.models import PPOModel
 
-class PPOAgent(VanillaPGAgent):
+class PPOAgent(ActorCriticAgent):
     '''
     Proximal Policy Optimization as described in (https://arxiv.org/pdf/1707.06347.pdf)
     PPO is implemented in two main methods:
