@@ -5,7 +5,7 @@ import tensorflow as tf
 import itertools
 from gymmeforce.agents import BatchAgent
 from gymmeforce.models import VanillaPGModel
-from gymmeforce.common.utils import discounted_sum_rewards
+from gymmeforce.common.utils import discounted_sum_rewards, explained_variance
 
 
 class VanillaPGAgent(BatchAgent):
@@ -43,8 +43,9 @@ class VanillaPGAgent(BatchAgent):
             # This is the classical way to fir vtarget (directly by the return)
             # TODO: Should a option to bootstrap be added?
             trajectory['baseline_target'] = trajectory['returns']
-            baseline = self.model.compute_baseline(self.sess, trajectory['states'])
-            trajectory['advantages'] = trajectory['returns'] - baseline
+            trajectory['baseline'] = self.model.compute_baseline(self.sess,
+                                                                 trajectory['states'])
+            trajectory['advantages'] = trajectory['returns'] - trajectory['baseline']
         else:
             trajectory['advantages'] = trajectory['returns']
 
@@ -80,8 +81,10 @@ class VanillaPGAgent(BatchAgent):
             rewards = np.concatenate([traj['rewards'] for traj in trajectories])
             returns = np.concatenate([traj['returns'] for traj in trajectories])
             advantages = np.concatenate([traj['advantages'] for traj in trajectories])
-            # CHANGE IT TO VTARG FOR FUCK SAKE
-            baseline_targets = np.concatenate([traj['baseline_target'] for traj in trajectories])
+            # Change to vtarg
+            baseline = np.concatenate([traj['baseline'] for traj in trajectories])
+            baseline_targets = np.concatenate([traj['baseline_target']
+                                               for traj in trajectories])
 
 
             # Update global step
@@ -96,7 +99,9 @@ class VanillaPGAgent(BatchAgent):
             i_episode = len(ep_rewards)
             num_episodes = len(trajectories)
             i_step = self.model.get_global_step(self.sess)
+            ev = explained_variance(y_true=baseline_targets, y_pred=baseline)
             self.logger.add_log('Reward Mean', np.mean(ep_rewards[-num_episodes:]))
+            self.logger.add_log('baseline/Explained Variance', ev)
             self.model.write_logs(self.sess, self.logger)
             self.logger.add_log('Learning Rate', learning_rate, precision=4)
             self.logger.timeit(num_steps)

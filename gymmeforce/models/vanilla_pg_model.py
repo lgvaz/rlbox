@@ -119,12 +119,6 @@ class VanillaPGModel(BaseModel):
         entropy = sess.run(self.policy.entropy_sy, feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
 
-        if self.use_baseline:
-            y_pred = sess.run(self.baseline_sy, feed_dict=self.placeholders_and_data)
-            y_true = self.placeholders_and_data[self.placeholders['returns']]
-            explained_variance = np.var(y_true - y_pred) / np.var(y_true)
-            logger.add_log('baseline/Explained Variance', explained_variance)
-
         self.write_summaries(sess, self.placeholders_and_data)
 
     def write_summaries(self, sess, feed_dict):

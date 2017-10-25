@@ -30,6 +30,9 @@ class PPOModel(VanillaPGModel):
             self.update_old_policy_op = tf_copy_params_op(from_scope='policy',
                                                           to_scope='old_policy')
 
+    def _update_old_policy(self, sess):
+        sess.run(self.update_old_policy_op)
+
     def _add_losses(self):
         self._clipped_surrogate_loss()
         self._entropy_loss()
@@ -55,9 +58,6 @@ class PPOModel(VanillaPGModel):
                 clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
             tf.losses.add_loss(clipped_surrogate_loss)
-
-    def _update_old_policy(self, sess):
-        sess.run(self.update_old_policy_op)
 
     # This lines show an example of how to add an additional placeholder which
     # will be fetched during the training operation
@@ -97,12 +97,6 @@ class PPOModel(VanillaPGModel):
                                feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
-
-        if self.use_baseline:
-            y_pred = sess.run(self.baseline_sy, feed_dict=self.placeholders_and_data)
-            y_true = self.placeholders_and_data[self.placeholders['returns']]
-            explained_variance = np.var(y_true - y_pred) / np.var(y_true)
-            logger.add_log('baseline/Explained Variance', explained_variance)
 
         self.write_summaries(sess, self.placeholders_and_data)
 

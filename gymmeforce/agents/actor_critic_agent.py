@@ -10,15 +10,15 @@ class ActorCriticAgent(VanillaPGAgent):
         super().__init__(env_name, use_baseline=True, **kwargs)
 
     def _add_advantages_and_vtarget(self, trajectory):
-        baseline = self.model.compute_baseline(self.sess, trajectory['states'])
-        td_target = trajectory['rewards'] + self.gamma * np.append(baseline[1:], 0)
+        trajectory['baseline'] = self.model.compute_baseline(self.sess, trajectory['states'])
+        td_target = trajectory['rewards'] + self.gamma * np.append(trajectory['baseline'][1:], 0)
         if self.use_gae:
-            td_residual = td_target - baseline
+            td_residual = td_target - trajectory['baseline']
             gae = discounted_sum_rewards(td_residual, self.gamma * self.gae_lambda)
             trajectory['advantages'] = gae
-            trajectory['baseline_target'] = gae + baseline
+            trajectory['baseline_target'] = gae + trajectory['baseline']
         else:
-            trajectory['advantages'] = trajectory['returns'] - baseline
+            trajectory['advantages'] = trajectory['returns'] - trajectory['baseline']
             trajectory['baseline_target'] = td_target
 
     def train(self, learning_rate, use_gae=True, gae_lambda=0.95, **kwargs):
