@@ -3,6 +3,7 @@ import gym
 import numpy as np
 import tensorflow as tf
 from gym import wrappers
+from gymmeforce.common.utils import Scaler
 from gymmeforce.common.print_utils import Logger
 
 
@@ -11,10 +12,11 @@ from gymmeforce.common.print_utils import Logger
 # TODO: Change video dir when evaluating
 class BaseAgent:
     def __init__(self, env_name, log_dir='data/examples',
-                 env_wrapper=None, debug=False, **kwargs):
+                 env_wrapper=None, scale_states=False, debug=False, **kwargs):
         self.env_name = env_name
         self.log_dir = log_dir
         self.env_wrapper = env_wrapper
+        self.scale_states = scale_states
         self.logger = Logger(debug)
         self.model = None
         self.sess = None
@@ -48,6 +50,8 @@ class BaseAgent:
         else:
             self.env_config['input_type'] = tf.float32
 
+        # TODO: where scaler should be? In base or batch agent?
+        self.scaler = Scaler(self.env_config['state_shape'])
     def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
         env = gym.make(self.env_name)
@@ -76,3 +80,10 @@ class BaseAgent:
 
     def select_action(self, state):
         raise NotImplementedError
+
+    def scale_state(self, state):
+        scale, offset = self.scaler.get()
+        return (state - offset) * scale
+
+    def update_scaler(self, states):
+        self.scaler.update(states)

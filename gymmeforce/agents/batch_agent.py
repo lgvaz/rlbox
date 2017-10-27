@@ -1,25 +1,22 @@
 import numpy as np
 from gymmeforce.agents import BaseAgent
-from gymmeforce.common.utils import Scaler
 
 
 class BatchAgent(BaseAgent):
-    def __init__(self, env_name, normalize_advantages=True, **kwargs):
+    def __init__(self, env_name, **kwargs):
         super(BatchAgent, self).__init__(env_name, **kwargs)
-        self.scaler = Scaler(self.env_config['state_shape'])
 
     def _run_episode(self, env, render=False):
         state = env.reset()
         done = False
         states, actions, rewards, unscaled_states = [], [], [], []
-        scale, offset = self.scaler.get()
 
         while not done:
             if render:
                 env.render()
             unscaled_states.append(state)
-            state = (state - offset) * scale
-            state = state
+            if self.scale_states:
+                state = self.scale_state(state)
             states.append(state)
             # Select and execute action
             action = self.select_action(state)
@@ -47,6 +44,7 @@ class BatchAgent(BaseAgent):
             total_steps += trajectory['rewards'].shape[0]
 
             unscaled = np.concatenate([traj['unscaled_states'] for traj in trajectories])
-            self.scaler.update(unscaled)
+            if self.scale_states:
+                self.update_scaler(unscaled)
 
         return trajectories
