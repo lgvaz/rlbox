@@ -44,6 +44,7 @@ class DQNModel(BaseModel):
             'actions': [[None], tf.int32],
             'rewards': [[None], tf.float32],
             'dones': [[None], tf.float32],
+            'n_step': [[], tf.float32],
             'learning_rate': [[], tf.float32]
         }
 
@@ -59,8 +60,7 @@ class DQNModel(BaseModel):
 
         self.q_online_t = self.graph(states_t,
                                      self.env_config['num_actions'],
-                                     'online',
-                                     dueling=self.dueling)
+                                     'online', dueling=self.dueling)
         self.q_target_tp1 = self.graph(states_tp1,
                                        self.env_config['num_actions'],
                                        'target',
@@ -72,7 +72,7 @@ class DQNModel(BaseModel):
                                            dueling=self.dueling,
                                            reuse=True)
 
-    def _build_optimization(self, clip_norm, gamma, n_step):
+    def _build_optimization(self, clip_norm, gamma):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.placeholders['actions'],
                                     self.env_config['num_actions'])
@@ -85,7 +85,7 @@ class DQNModel(BaseModel):
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)
         td_target = (self.placeholders['rewards']
-                     + (1 - self.placeholders['dones']) * (gamma ** n_step) * q_tp1)
+                     + (1 - self.placeholders['dones']) * (gamma ** self.placeholders['n_step']) * q_tp1)
         errors = tf.losses.huber_loss(labels=td_target, predictions=q_t)
         self.total_error = tf.reduce_mean(errors)
 
@@ -119,9 +119,9 @@ class DQNModel(BaseModel):
         tf.summary.scalar('network/Q_max', tf.reduce_max(self.q_online_t))
         tf.summary.histogram('network/q_values', self.q_online_t)
 
-    def create_training_ops(self, gamma, clip_norm, n_step, target_soft_update):
+    def create_training_ops(self, gamma, clip_norm, target_soft_update):
         # Create training operations
-        self.training_op = self._build_optimization(clip_norm, gamma, n_step)
+        self.training_op = self._build_optimization(clip_norm, gamma)
         self.update_target_op = self._build_target_update_op(target_soft_update)
 
     def predict(self, sess, states):
@@ -133,18 +133,19 @@ class DQNModel(BaseModel):
     def update_target_net(self, sess):
         sess.run(self.update_target_op)
 
-    def fit(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
+    def fit(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones, n_step):
         feed_dict = {
             self.placeholders['states_t']: states_t,
             self.placeholders['states_tp1']: states_tp1,
             self.placeholders['actions']: actions,
             self.placeholders['rewards']: rewards,
             self.placeholders['dones']: dones,
-            self.placeholders['learning_rate']: learning_rate
+            self.placeholders['learning_rate']: learning_rate,
+            self.placeholders['n_step']: n_step
         }
         sess.run(self.training_op, feed_dict=feed_dict)
 
-    def write_summaries(self, sess, step, states_t, states_tp1, actions, rewards, dones):
+    def write_summaries(self, sess, step, states_t, states_tp1, actions, rewards, dones, n_step):
         if self.merged is None:
             self._create_summaries_op()
             self.merged = tf.summary.merge_all()
@@ -154,7 +155,8 @@ class DQNModel(BaseModel):
             self.placeholders['states_tp1']: states_tp1,
             self.placeholders['actions']: actions,
             self.placeholders['rewards']: rewards,
-            self.placeholders['dones']: dones
+            self.placeholders['dones']: dones,
+            self.placeholders['n_step']: n_step
         }
         summary = sess.run(self.merged, feed_dict=feed_dict)
         self._writer.add_summary(summary, global_step=step)
