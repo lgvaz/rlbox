@@ -130,10 +130,9 @@ class DQNAgent(ReplayAgent):
                 # Get batch to train on
                 random_n_step = np.random.randint(1, n_step)
                 b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample(random_n_step)
-                if random_n_step > 1:
-                    # Calculate n_step rewards
-                    b_r = [discounted_sum_rewards_final_sum(r, d) for r, d in zip(b_r, b_d)]
-                    b_d = np.any(b_d, axis=1)
+                # Calculate n_step rewards
+                b_r = [discounted_sum_rewards_final_sum(r, d) for r, d in zip(b_r, b_d)]
+                b_d = np.any(b_d, axis=1)
                 # Calculate learning rate
                 if callable(learning_rate):
                     lr = learning_rate(i_step)
