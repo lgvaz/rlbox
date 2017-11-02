@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 import numpy as np
 from collections import defaultdict
 
@@ -11,6 +12,7 @@ class Logger:
         self.time = time.time()
         self.tf_scalar_summary_writer = None
         self.sess = None
+        self.eta = None
 
     def add_tf_writer(self, sess, tf_scalar_summary_writer):
         self.sess = sess
@@ -31,6 +33,8 @@ class Logger:
 
         # Log to the console
         self.logs = defaultdict(list)
+        if self.eta is not None:
+            header += ' | ETA: {}'.format(self.eta)
         print_table(avg_dict, header)
 
         # Write tensorflow summary
@@ -38,11 +42,16 @@ class Logger:
             for key, value in avg_dict.items():
                 self.tf_scalar_summary_writer(self.sess, key, float(value))
 
-    def timeit(self, steps):
+    def timeit(self, steps, max_steps=None):
         new_time = time.time()
         steps_sec = steps / (new_time - self.time)
         self.add_log('Steps/Second', steps_sec)
         self.time = new_time
+
+        if max_steps is not None:
+            eta_seconds = (max_steps - steps) / steps_sec
+            # Format days, hours, minutes, seconds and remove milliseconds
+            self.eta = str(timedelta(seconds=eta_seconds)).split('.')[0]
 
 
 def print_table(tags_and_values_dict, header=None, width=42):
