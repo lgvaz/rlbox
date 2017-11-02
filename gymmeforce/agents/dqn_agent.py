@@ -99,7 +99,7 @@ class DQNAgent(ReplayAgent):
 
         self._populate_replay_buffer(ep_runner, replay_buffer_size, init_buffer_size, batch_size, n_step)
         # Create training ops
-        self.model.create_training_ops(gamma, clip_norm, n_step, target_soft_update)
+        self.model.create_training_ops(gamma, clip_norm, target_soft_update)
         # Create Session
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
@@ -128,8 +128,9 @@ class DQNAgent(ReplayAgent):
             # Perform gradient descent
             if i_step % learning_freq == 0:
                 # Get batch to train on
-                b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample()
-                if n_step > 1:
+                random_n_step = np.random.randint(1, n_step)
+                b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample(random_n_step)
+                if random_n_step > 1:
                     # Calculate n_step rewards
                     b_r = [discounted_sum_rewards_final_sum(r, d) for r, d in zip(b_r, b_d)]
                     b_d = np.any(b_d, axis=1)
@@ -138,7 +139,7 @@ class DQNAgent(ReplayAgent):
                     lr = learning_rate(i_step)
                 else:
                     lr = learning_rate
-                self.model.fit(self.sess, lr, b_s, b_s_, b_a, b_r, b_d)
+                self.model.fit(self.sess, lr, b_s, b_s_, b_a, b_r, b_d, random_n_step)
 
             # Update target network
             if i_step % target_update_freq == 0:
@@ -155,7 +156,7 @@ class DQNAgent(ReplayAgent):
                 num_new_episodes = num_episodes - num_episodes_old
                 mean_ep_rewards = np.mean(ep_rewards[-num_new_episodes:])
                 # Write summaries
-                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d)
+                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d, random_n_step)
                 # Write logs
                 self.logger.add_log('Reward/Episode (unclipped)', mean_ep_rewards)
                 self.logger.add_log('Learning Rate', lr, precision=5)

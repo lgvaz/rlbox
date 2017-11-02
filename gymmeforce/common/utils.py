@@ -81,11 +81,13 @@ class ReplayBuffer:
         self.current_idx = (self.current_idx + 1) % self.maxlen
         self.current_len = min(self.current_len + 1, self.maxlen)
 
-    def sample(self):
+    def sample(self, n_step=None):
+        if n_step is None:
+            n_step = self.n_step
         start_idxs, end_idxs = self._generate_idxs()
         # Get states
         b_states_t = self.states_stride_history[start_idxs]
-        b_states_tp1 = self.states_stride_history[start_idxs + self.n_step]
+        b_states_tp1 = self.states_stride_history[start_idxs + n_step]
 
         if self.n_step > 1:
             rewards = self.rewards_stride_nstep[end_idxs - 1]
@@ -98,7 +100,7 @@ class ReplayBuffer:
 
         return (b_states_t.swapaxes(1, -1),
                 b_states_tp1.swapaxes(1, -1),
-                actions, rewards, dones)
+                actions, rewards[:, :n_step], dones[:, :n_step])
 
     # TODO: this is too slow
     def _generate_idxs(self):
