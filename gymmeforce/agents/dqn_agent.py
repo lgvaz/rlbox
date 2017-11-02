@@ -115,12 +115,6 @@ class DQNAgent(ReplayAgent):
             trajectory = self._play_and_add_to_buffer(ep_runner)
             reward_sum += trajectory['reward']
 
-            # Store experience
-            self.replay_buffer.add(trajectory['state'],
-                                   trajectory['action'],
-                                   trajectory['reward'],
-                                   trajectory['done'])
-
             if trajectory['done']:
                 self.logger.add_log('Reward/Life', reward_sum)
                 reward_sum = 0
