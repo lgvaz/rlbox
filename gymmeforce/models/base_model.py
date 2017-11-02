@@ -67,18 +67,6 @@ class BaseModel:
             print('Loading model from {}'.format(save_path))
             self._saver.restore(sess, save_path)
 
-    #TODO: Not a base function, currently used in DQN
-    def train(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones):
-        feed_dict = {
-            self.learning_rate_ph: learning_rate,
-            self.states_t_ph: states_t,
-            self.states_tp1_ph: states_tp1,
-            self.actions_ph: actions,
-            self.rewards_ph: rewards,
-            self.dones_ph: dones
-        }
-        sess.run(self.training_op, feed_dict=feed_dict)
-
     def summary_scalar(self, sess, name, value, step=None):
         if step is None:
             step = self.get_global_step(sess)

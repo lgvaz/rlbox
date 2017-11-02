@@ -17,7 +17,8 @@ exploration_schedule = piecewise_linear_decay(boundaries=[0.1 * num_steps, 0.5 *
 
 # Create agent
 agent = DQNAgent(env_name=env_name,
-                 log_dir='logs/lunar_lander/3step_dueling_ddqn_softtarget_v0_0',
+                 # log_dir='logs/lunar_lander/3step_dueling_ddqn_softtarget_v0_0',
+                 log_dir='tests/lunar_lander/3step_dueling_ddqn_softtarget_v0_0',
                  history_length=1,
                  double=True,
                  dueling=True)
@@ -28,4 +29,5 @@ agent.train(num_steps=num_steps,
             exploration_schedule=exploration_schedule,
             replay_buffer_size=2e4,
             target_update_freq=10,
-            target_soft_update=0.01)
+            target_soft_update=0.01,
+            log_steps=1e4)

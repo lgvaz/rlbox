@@ -33,6 +33,10 @@ class BaseAgent:
         # Get env information
         state = env.reset()
         self.env_config['state_shape'] = np.squeeze(state).shape
+        if state.dtype == np.uint8:
+            self.env_config['input_type'] = tf.uint8
+        else:
+            self.env_config['input_type'] = tf.float32
         env.close()
         # Discrete or continuous actions?
         if isinstance(env.action_space, gym.spaces.Discrete):
@@ -43,15 +47,10 @@ class BaseAgent:
             self.env_config['num_actions'] = env.action_space.shape[0]
             self.env_config['action_low_bound'] = env.action_space.low
             self.env_config['action_high_bound'] = env.action_space.high
-        # If input is an image defaults to uint8, else defaults to float32
-        # TODO: Change this? Only for DQN?
-        if len(self.env_config['state_shape']) == 3:
-            self.env_config['input_type'] = tf.uint8
-        else:
-            self.env_config['input_type'] = tf.float32
 
         # TODO: where scaler should be? In base or batch agent?
         self.scaler = Scaler(self.env_config['state_shape'])
+
     def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
         env = gym.make(self.env_name)
