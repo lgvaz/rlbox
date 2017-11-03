@@ -8,7 +8,7 @@ env_name = 'SpaceInvadersNoFrameskip-v4'
 # env_name = 'PongNoFrameskip-v4'
 
 # Define learning rate and exploration schedule
-num_steps = 10e6
+num_steps = 40e6
 learning_rate_schedule = piecewise_linear_decay(
     boundaries=[0.1 * num_steps, 0.5 * num_steps], values=[1, .5, .5], initial_value=1e-4)
 exploration_schedule = piecewise_linear_decay(
@@ -28,5 +28,5 @@ agent.train(
     learning_rate=learning_rate_schedule,
     exploration_schedule=exploration_schedule,
     replay_buffer_size=1e6,
-    target_update_freq=20000,
+    target_update_freq=30000,
     log_steps=4e4)
