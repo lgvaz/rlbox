@@ -13,6 +13,7 @@ class Logger:
         self.time = time.time()
         self.tf_scalar_summary_writer = None
         self.sess = None
+        self.steps_sum = 0
         self.eta = None
 
     def add_tf_writer(self, sess, tf_scalar_summary_writer):
@@ -29,30 +30,36 @@ class Logger:
 
     def log(self, header=None):
         ''' Write the mean of the values added to each key and clear previous values '''
+        # Take the mean of the values
+        self.logs = {key: np.mean(value) for key, value in self.logs.items()}
+        # Convert values to string, with defined precision
         avg_dict = {
-            key: '{:.{prec}f}'.format(np.mean(value), prec=self.precision[key])
+            key: '{:.{prec}f}'.format(value, prec=self.precision[key])
             for key, value in self.logs.items()
         }
 
         # Log to the console
-        self.logs = defaultdict(list)
         if self.eta is not None:
             header += ' | ETA: {}'.format(self.eta)
         print_table(avg_dict, header)
 
         # Write tensorflow summary
         if self.tf_scalar_summary_writer is not None:
-            for key, value in avg_dict.items():
-                self.tf_scalar_summary_writer(self.sess, key, float(value))
+            for key, value in self.logs.items():
+                self.tf_scalar_summary_writer(self.sess, key, value)
+
+        # Reset dict
+        self.logs = defaultdict(list)
 
     def timeit(self, steps, max_steps=None):
         new_time = time.time()
         steps_sec = steps / (new_time - self.time)
         self.add_log('Steps/Second', steps_sec)
         self.time = new_time
+        self.steps_sum += steps
 
         if max_steps is not None:
-            eta_seconds = (max_steps - steps) / steps_sec
+            eta_seconds = (max_steps - self.steps_sum) / steps_sec
             # Format days, hours, minutes, seconds and remove milliseconds
             self.eta = str(timedelta(seconds=eta_seconds)).split('.')[0]
 
