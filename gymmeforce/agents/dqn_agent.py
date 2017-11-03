@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import discounted_sum_rewards_final_sum
+from gymmeforce.common.utils import discounted_sum_rewards_final_sum, calculate_n_step_return
 from gymmeforce.models import DQNModel
 from gymmeforce.common.gym_utils import EpisodeRunner
 from gymmeforce.agents import ReplayAgent
@@ -56,7 +56,6 @@ class DQNAgent(ReplayAgent):
                   '{:.2f}'.format(np.max(rewards)),
                   '{:.2f}'.format(np.min(rewards))]
         print_table(tags, values, header=header)
-
 
     def train(self, num_steps, n_step, learning_rate, exploration_schedule,
               replay_buffer_size, target_update_freq, target_soft_update=1.,
@@ -122,11 +121,10 @@ class DQNAgent(ReplayAgent):
             # Perform gradient descent
             if i_step % learning_freq == 0:
                 # Get batch to train on
-                random_n_step = np.random.randint(1, n_step)
+                random_n_step = np.random.randint(1, n_step + 1)
                 b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample(random_n_step)
                 # Calculate n_step rewards
-                b_r = [discounted_sum_rewards_final_sum(r, d) for r, d in zip(b_r, b_d)]
-                b_d = np.any(b_d, axis=1)
+                b_r, b_d = zip(*[calculate_n_step_return(r, d) for r, d in zip(b_r, b_d)])
                 # Calculate learning rate
                 if callable(learning_rate):
                     lr = learning_rate(i_step)

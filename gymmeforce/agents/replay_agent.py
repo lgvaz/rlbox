@@ -11,61 +11,6 @@ class ReplayAgent(BaseAgent):
         self.states_history = RingBuffer(self.env_config['state_shape'], history_length)
         self.env_config['state_shape'] += (self.history_length,)
 
-    def _play_one_step(self, env, state, epsilon, render=False):
-        if render:
-            env.render()
-
-        # Concatenates <history_length> states
-        self.states_history.append(state)
-        state_hist = self.states_history.get_data()
-
-        # Select and execute action
-        action = self.select_action(env, state_hist, epsilon)
-        next_state, reward, done, info = env.step(action)
-
-        if done:
-            self.states_history.reset()
-
-        trajectory = {
-            'next_state': next_state,
-            'action': action,
-            'reward': reward,
-            'done': done
-        }
-
-        return trajectory
-
-    def _trajectory_generator(self, env):
-        state = env.reset()
-
-        def run_one_step(epsilon, render=False):
-            if render:
-                env.render()
-
-
-            # Select and execute action
-            action = self.select_action(env, state_hist, epsilon)
-            next_state, reward, done, info = env.step(action)
-
-            trajectory = {
-                'state': state,
-                'next_state': next_state,
-                'action': action,
-                'reward': reward,
-                'done': done
-            }
-
-            yield trajectory
-
-            if done:
-                next_state = env.reset()
-                self.states_history.reset()
-            else:
-                state = next_state
-
-        return run_one_step
-
-
     def _play_and_add_to_buffer(self, ep_runner):
         trajectory = ep_runner.run_one_step(self.select_action)
         # Store experience

@@ -53,7 +53,6 @@ class ReplayBuffer:
         self.current_idx = 0
         self.current_len = 0
 
-
     def add(self, state, action, reward, done):
         if not self.initialized:
             self.initialized = True
@@ -102,27 +101,31 @@ class ReplayBuffer:
                 b_states_tp1.swapaxes(1, -1),
                 actions, rewards[:, :n_step], dones[:, :n_step])
 
-    # TODO: this is too slow
     def _generate_idxs(self):
-        start_idxs = []
-        end_idxs = []
-        while len(start_idxs) < self.batch_size:
-            start_idx = np.random.randint(0, self.current_len
-                                          - self.history_length
-                                          - self.n_step)
-            end_idx = start_idx + self.history_length
+        start_idxs = np.random.randint(self.current_len
+                                       - self.history_length
+                                       - self.n_step,
+                                       size=self.batch_size)
+        end_idxs = start_idxs + self.history_length
+        # start_idxs = []
+        # end_idxs = []
+        # while len(start_idxs) < self.batch_size:
+        #     start_idx = np.random.randint(0, self.current_len
+        #                                   - self.history_length
+        #                                   - self.n_step)
+        #     end_idx = start_idx + self.history_length
 
-            # Check if idx was already picked
-            if start_idx in start_idxs:
-                continue
+        #     # Check if idx was already picked
+        #     if start_idx in start_idxs:
+        #         continue
 
-            # Check if state contains frames only from a single episode
-            if np.any(self.dones[start_idx : end_idx - 1]):
-                continue
+        #     # Check if state contains frames only from a single episode
+        #     if np.any(self.dones[start_idx : end_idx - 1]):
+        #         continue
 
-            # Valid idx!!
-            start_idxs.append(start_idx)
-            end_idxs.append(end_idx)
+        #     # Valid idx!!
+        #     start_idxs.append(start_idx)
+        #     end_idxs.append(end_idx)
 
         return np.array(start_idxs), np.array(end_idxs)
 
@@ -278,15 +281,15 @@ def discounted_sum_rewards(rewards, gamma=0.99):
     return lfilter([1.0], [1.0, -gamma], rewards[::-1])[::-1]
 
 
-def discounted_sum_rewards_final_sum(rewards, dones, gamma=0.99):
-    reward_sum = 0
+def calculate_n_step_return(rewards, dones, gamma=0.99):
+    done_idx = np.where(dones == 1)[0]
+    done = False
+    if done_idx:
+        rewards = rewards[:done_idx[0] + 1]
+        done = True
 
-    for reward, done in zip(reversed(rewards), reversed(dones)):
-        if done:
-            reward_sum = 0
-        reward_sum = reward + gamma * reward_sum
+    return discounted_sum_rewards(rewards, gamma)[0], done
 
-    return reward_sum
 
 def tf_copy_params_op(from_scope, to_scope, soft_update=1.):
     # Get variables within defined scope
