@@ -1,7 +1,6 @@
-import time
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.utils import discounted_sum_rewards_final_sum, calculate_n_step_return
+from gymmeforce.common.utils import calculate_n_step_return
 from gymmeforce.models import DQNModel
 from gymmeforce.common.gym_utils import EpisodeRunner
 from gymmeforce.agents import ReplayAgent
@@ -28,34 +27,6 @@ class DQNAgent(ReplayAgent):
             action = np.argmax(Q_values)
 
         return action
-
-    def play_n_lives(self, num_lives, epsilon=0.01, render=True, record=False):
-        monitored_env, env = self._create_env('videos/eval', record)
-        state = env.reset()
-        self._maybe_create_tf_sess()
-        for _ in range(num_lives):
-            done = False
-            while not done:
-                next_state, action, reward, done, _ = self._play_one_step(env, state,
-                                                                          epsilon, render)
-                # Update state
-                if done:
-                    state = env.reset()
-                else:
-                    state = next_state
-
-        # Print logs
-        rewards = monitored_env.get_episode_rewards()
-        header = '{} Episodes'.format(len(rewards))
-        tags = ['Reward Mean (unclipped)',
-                'Reward std_dev',
-                'Max reward',
-                'Min reward']
-        values = ['{:.2f}'.format(np.mean(rewards)),
-                  '{:.2f}'.format(np.std(rewards)),
-                  '{:.2f}'.format(np.max(rewards)),
-                  '{:.2f}'.format(np.min(rewards))]
-        print_table(tags, values, header=header)
 
     def train(self, num_steps, n_step, learning_rate, exploration_schedule,
               replay_buffer_size, target_update_freq, target_soft_update=1.,
@@ -98,7 +69,7 @@ class DQNAgent(ReplayAgent):
 
         self._populate_replay_buffer(ep_runner, replay_buffer_size, init_buffer_size, batch_size, n_step)
         # Create training ops
-        self.model.create_training_ops(gamma, clip_norm, target_soft_update)
+        self.model.create_training_op(gamma, clip_norm, target_soft_update)
         # Create Session
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
@@ -106,7 +77,6 @@ class DQNAgent(ReplayAgent):
         print('Started training')
         num_episodes = 0
         reward_sum = 0
-        start_time = time.time()
         # TODO: soft updating here, need to hard copy weights
         self.model.update_target_net(self.sess)
         for i_step in range(1, int(num_steps) + 1):
@@ -147,7 +117,7 @@ class DQNAgent(ReplayAgent):
                 num_new_episodes = num_episodes - num_episodes_old
                 mean_ep_rewards = np.mean(ep_rewards[-num_new_episodes:])
                 # Write summaries
-                self.model.write_summaries(self.sess, i_step, b_s, b_s_, b_a, b_r, b_d, random_n_step)
+                self.model.write_logs(self.sess)
                 # Write logs
                 self.logger.add_log('Reward/Episode (unclipped)', mean_ep_rewards)
                 self.logger.add_log('Learning Rate', lr, precision=5)

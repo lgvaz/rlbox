@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 from gymmeforce.models.base_model import BaseModel
+from gymmeforce.common.utils import tf_copy_params_op
 
 
 class DQNModel(BaseModel):
@@ -49,7 +50,6 @@ class DQNModel(BaseModel):
         }
 
     def _create_graphs(self):
-        #TODO: FIX THIS
         if tf.uint8 == self.env_config['input_type']:
             # Convert to float on GPU
             states_t = tf.cast(self.placeholders['states_t'], tf.float32) / 255.
@@ -97,32 +97,36 @@ class DQNModel(BaseModel):
         with tf.variable_scope('gradient_clipping'):
             clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
                             for grad, var in grads_and_vars if grad is not None]
-        training_op = opt.apply_gradients(clipped_grads)
-
-        return training_op
+        self.training_op = opt.apply_gradients(clipped_grads)
 
     def _build_target_update_op(self, target_soft_update=1.):
-        # Get variables within defined scope
-        online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'online')
-        target_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'target')
-        # Create operations that copy the variables
-        op_holder = [target_var.assign(target_soft_update * online_var
-                                       + (1 - target_soft_update) * target_var)
-                     for online_var, target_var in zip(online_vars, target_vars)]
+        self.update_target_op = tf_copy_params_op('online', 'target', target_soft_update)
 
-        return op_holder
+    def _fetch_placeholders_data_dict(self, states_t, states_tp1, actions, rewards, dones, n_step, learning_rate):
+        '''
+        Create a dictionary mapping placeholders to their correspondent value
+        Modify this method to include new placeholders to feed_dict used by training_op
+        '''
+        self.placeholders_and_data = {
+            self.placeholders['states_t']: states_t,
+            self.placeholders['states_tp1']: states_tp1,
+            self.placeholders['actions']: actions,
+            self.placeholders['rewards']: rewards,
+            self.placeholders['dones']: dones,
+            self.placeholders['n_step']: n_step,
+            self.placeholders['learning_rate']: learning_rate
+        }
 
     def _create_summaries_op(self):
-        self._maybe_create_writer()
-        tf.summary.scalar('network/loss', self.total_error)
+        super()._create_summaries_op()
         tf.summary.scalar('network/Q_mean', tf.reduce_mean(self.q_online_t))
         tf.summary.scalar('network/Q_max', tf.reduce_max(self.q_online_t))
         tf.summary.histogram('network/q_values', self.q_online_t)
 
-    def create_training_ops(self, gamma, clip_norm, target_soft_update):
+    def create_training_op(self, gamma, clip_norm, target_soft_update):
         # Create training operations
-        self.training_op = self._build_optimization(clip_norm, gamma)
-        self.update_target_op = self._build_target_update_op(target_soft_update)
+        self._build_optimization(clip_norm, gamma)
+        self._build_target_update_op(target_soft_update)
 
     def predict(self, sess, states):
         return sess.run(self.q_online_t, feed_dict={self.placeholders['states_t']: states})
@@ -134,29 +138,8 @@ class DQNModel(BaseModel):
         sess.run(self.update_target_op)
 
     def fit(self, sess, learning_rate, states_t, states_tp1, actions, rewards, dones, n_step):
-        feed_dict = {
-            self.placeholders['states_t']: states_t,
-            self.placeholders['states_tp1']: states_tp1,
-            self.placeholders['actions']: actions,
-            self.placeholders['rewards']: rewards,
-            self.placeholders['dones']: dones,
-            self.placeholders['learning_rate']: learning_rate,
-            self.placeholders['n_step']: n_step
-        }
-        sess.run(self.training_op, feed_dict=feed_dict)
+        self._fetch_placeholders_data_dict(states_t, states_tp1, actions, rewards, dones, n_step, learning_rate)
+        sess.run(self.training_op, feed_dict=self.placeholders_and_data)
 
-    def write_summaries(self, sess, step, states_t, states_tp1, actions, rewards, dones, n_step):
-        if self.merged is None:
-            self._create_summaries_op()
-            self.merged = tf.summary.merge_all()
-
-        feed_dict = {
-            self.placeholders['states_t']: states_t,
-            self.placeholders['states_tp1']: states_tp1,
-            self.placeholders['actions']: actions,
-            self.placeholders['rewards']: rewards,
-            self.placeholders['dones']: dones,
-            self.placeholders['n_step']: n_step
-        }
-        summary = sess.run(self.merged, feed_dict=feed_dict)
-        self._writer.add_summary(summary, global_step=step)
+    def write_logs(self, sess, logger=None):
+        self._write_summaries(sess, self.placeholders_and_data)

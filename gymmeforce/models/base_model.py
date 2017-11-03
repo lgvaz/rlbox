@@ -50,6 +50,14 @@ class BaseModel:
             name = '/'.join(['losses'] + tensor.name.split('/')[:-1])
             tf.summary.scalar(name, tensor)
 
+    def _write_summaries(self, sess, feed_dict):
+        if self.merged is None:
+            self._create_summaries_op()
+            self.merged = tf.summary.merge_all()
+
+        summary = sess.run(self.merged, feed_dict=feed_dict)
+        self._writer.add_summary(summary, self.get_global_step(sess))
+
     def save(self, sess, name='model'):
         self._maybe_create_saver()
         save_path = os.path.join(self.log_dir, name)

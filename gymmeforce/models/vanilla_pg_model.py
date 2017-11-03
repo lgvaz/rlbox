@@ -119,14 +119,7 @@ class VanillaPGModel(BaseModel):
         entropy = sess.run(self.policy.entropy_sy, feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
 
-        self.write_summaries(sess, self.placeholders_and_data)
-
-    def write_summaries(self, sess, feed_dict):
-        if self.merged is None:
-            self._create_summaries_op()
-            self.merged = tf.summary.merge_all()
-        summary = sess.run(self.merged, feed_dict=feed_dict)
-        self._writer.add_summary(summary, self.get_global_step(sess))
+        self._write_summaries(sess, self.placeholders_and_data)
 
     def select_action(self, sess, state):
         return self.policy.sample_action(sess, state[np.newaxis])
