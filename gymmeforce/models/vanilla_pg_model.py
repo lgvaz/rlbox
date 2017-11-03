@@ -1,15 +1,21 @@
 import numpy as np
 import tensorflow as tf
+
+from gymmeforce.common.data_gen import DataGenerator
+from gymmeforce.common.policy import Policy
+from gymmeforce.models.base_model import BaseModel
 from gymmeforce.models.policy_graphs import dense_policy_graph
 from gymmeforce.models.value_graphs import dense_value_graph
-from gymmeforce.models.base_model import BaseModel
-from gymmeforce.common.policy import Policy
-from gymmeforce.common.data_gen import DataGenerator
 
 
 class VanillaPGModel(BaseModel):
-    def __init__(self, env_config, use_baseline=True, entropy_coef=0.0,
-                 policy_graph=None, value_graph=None, **kwargs):
+    def __init__(self,
+                 env_config,
+                 use_baseline=True,
+                 entropy_coef=0.0,
+                 policy_graph=None,
+                 value_graph=None,
+                 **kwargs):
         super(VanillaPGModel, self).__init__(env_config, **kwargs)
         self.use_baseline = use_baseline
         self.entropy_coef = entropy_coef
@@ -54,7 +60,8 @@ class VanillaPGModel(BaseModel):
 
     def _pg_loss(self):
         with tf.variable_scope('pg_loss'):
-            loss = -tf.reduce_mean(self.policy.logprob_sy * self.placeholders['advantages'])
+            loss = -tf.reduce_mean(
+                self.policy.logprob_sy * self.placeholders['advantages'])
             tf.losses.add_loss(loss)
 
     def _entropy_loss(self):
@@ -65,18 +72,19 @@ class VanillaPGModel(BaseModel):
     def _baseline_loss(self):
         with tf.variable_scope('baseline_loss'):
             # This automatically adds the loss to the loss collection
-            loss = tf.losses.mean_squared_error(labels=self.baseline_target,
-                                                predictions=self.baseline_sy)
+            loss = tf.losses.mean_squared_error(
+                labels=self.baseline_target, predictions=self.baseline_sy)
 
     def _create_baseline(self):
         return self.value_graph(self.placeholders['states'])
 
     def _create_policy(self):
-        self.policy = Policy(self.env_config,
-                             states_ph=self.placeholders['states'],
-                             actions_ph=self.placeholders['actions'],
-                             graph=self.policy_graph,
-                             scope='policy')
+        self.policy = Policy(
+            self.env_config,
+            states_ph=self.placeholders['states'],
+            actions_ph=self.placeholders['actions'],
+            graph=self.policy_graph,
+            scope='policy')
 
     def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
         '''
@@ -127,8 +135,16 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    def fit(self, sess, states, actions, returns, advantages, learning_rate,
-            num_epochs=10, batch_size=64, logger=None):
+    def fit(self,
+            sess,
+            states,
+            actions,
+            returns,
+            advantages,
+            learning_rate,
+            num_epochs=10,
+            batch_size=64,
+            logger=None):
         self._fetch_placeholders_data_dict(sess, states, actions, returns, advantages)
         data = DataGenerator(self.placeholders_and_data)
 

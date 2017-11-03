@@ -1,11 +1,10 @@
-import os
-import gym
-import numpy as np
-import tensorflow as tf
 import itertools
+
+import numpy as np
+
 from gymmeforce.agents import BatchAgent
-from gymmeforce.models import VanillaPGModel
 from gymmeforce.common.utils import discounted_sum_rewards, explained_variance
+from gymmeforce.models import VanillaPGModel
 
 
 class VanillaPGAgent(BatchAgent):
@@ -26,6 +25,7 @@ class VanillaPGAgent(BatchAgent):
             (default None)
         log_dir: Directory used for writing logs (default 'logs/examples')
     '''
+
     def __init__(self, env_name, normalize_advantages, **kwargs):
         super(VanillaPGAgent, self).__init__(env_name, **kwargs)
         self.model = self._create_model(**kwargs)
@@ -43,8 +43,8 @@ class VanillaPGAgent(BatchAgent):
             # This is the classical way to fir vtarget (directly by the return)
             # TODO: Should a option to bootstrap be added?
             trajectory['baseline_target'] = trajectory['returns']
-            trajectory['baseline'] = self.model.compute_baseline(self.sess,
-                                                                 trajectory['states'])
+            trajectory['baseline'] = self.model.compute_baseline(
+                self.sess, trajectory['states'])
             trajectory['advantages'] = trajectory['returns'] - trajectory['baseline']
         else:
             trajectory['advantages'] = trajectory['returns']
@@ -52,20 +52,30 @@ class VanillaPGAgent(BatchAgent):
     def _normalize_advantages(self, trajectory):
         mean_adv = np.mean(trajectory['advantages'])
         std_adv = np.std(trajectory['advantages'])
-        trajectory['advantages'] = (trajectory['advantages'] - mean_adv) / (std_adv + 1e-7)
+        trajectory['advantages'] = (trajectory['advantages'] - mean_adv) / (
+            std_adv + 1e-7)
 
     def select_action(self, state):
         return self.model.select_action(self.sess, state)
 
-    def train(self, learning_rate, max_iters=-1, max_episodes=-1, max_steps=-1,
-              gamma=0.99, timesteps_per_batch=2000, num_epochs=1,
-              batch_size=64, record_freq=None, max_episode_steps=None):
+    def train(self,
+              learning_rate,
+              max_iters=-1,
+              max_episodes=-1,
+              max_steps=-1,
+              gamma=0.99,
+              timesteps_per_batch=2000,
+              num_epochs=1,
+              batch_size=64,
+              record_freq=None,
+              max_episode_steps=None):
         self.gamma = gamma
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
-        monitored_env, env = self._create_env(monitor_dir='videos/train',
-                                              record_freq=record_freq,
-                                              max_episode_steps=max_episode_steps)
+        monitored_env, env = self._create_env(
+            monitor_dir='videos/train',
+            record_freq=record_freq,
+            max_episode_steps=max_episode_steps)
 
         for i_iter in itertools.count():
             # Generate policy rollouts
@@ -83,16 +93,23 @@ class VanillaPGAgent(BatchAgent):
             advantages = np.concatenate([traj['advantages'] for traj in trajectories])
             # Change to vtarg
             baseline = np.concatenate([traj['baseline'] for traj in trajectories])
-            baseline_targets = np.concatenate([traj['baseline_target']
-                                               for traj in trajectories])
-
+            baseline_targets = np.concatenate(
+                [traj['baseline_target'] for traj in trajectories])
 
             # Update global step
             num_steps = len(rewards)
             self.model.increase_global_step(self.sess, num_steps)
 
-            self.model.fit(self.sess, states, actions, baseline_targets, advantages, learning_rate,
-                           num_epochs=num_epochs, batch_size=batch_size, logger=self.logger)
+            self.model.fit(
+                self.sess,
+                states,
+                actions,
+                baseline_targets,
+                advantages,
+                learning_rate,
+                num_epochs=num_epochs,
+                batch_size=batch_size,
+                logger=self.logger)
 
             # Logs
             ep_rewards = monitored_env.get_episode_rewards()
@@ -105,12 +122,12 @@ class VanillaPGAgent(BatchAgent):
             self.model.write_logs(self.sess, self.logger)
             self.logger.add_log('Learning Rate', learning_rate, precision=4)
             self.logger.timeit(num_steps)
-            self.logger.log('Iter {} | Episode {} | Step {}'.format(i_iter, i_episode, i_step))
+            self.logger.log('Iter {} | Episode {} | Step {}'.format(
+                i_iter, i_episode, i_step))
 
             # Check for termination
-            if (i_iter // max_iters >= 1
-                or i_episode // max_episodes >= 1
-                or i_step // max_steps >= 1):
+            if (i_iter // max_iters >= 1 or i_episode // max_episodes >= 1
+                    or i_step // max_steps >= 1):
                 break
 
         # Save

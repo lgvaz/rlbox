@@ -2,32 +2,34 @@ import gym
 from gymmeforce.agents import DQNAgent
 from gymmeforce.common.utils import piecewise_linear_decay
 
-
 # Create gym enviroment
 env_name = 'LunarLander-v2'
 
 # Define learning rate and exploration schedule
 num_steps = 6e5
-learning_rate_schedule = piecewise_linear_decay(boundaries=[0.1 * num_steps, 0.5 * num_steps],
-                                                values=[1, .1, .1],
-                                                initial_value=1e-3)
-exploration_schedule = piecewise_linear_decay(boundaries=[0.1 * num_steps, 0.5 * num_steps],
-                                              values=[.1, .01, .01],
-                                              initial_value=1.)
+learning_rate_schedule = piecewise_linear_decay(
+    boundaries=[0.1 * num_steps, 0.5 * num_steps], values=[1, .1, .1], initial_value=1e-3)
+exploration_schedule = piecewise_linear_decay(
+    boundaries=[0.1 * num_steps, 0.5 * num_steps],
+    values=[.1, .01, .01],
+    initial_value=1.)
 
 # Create agent
-agent = DQNAgent(env_name=env_name,
-                 # log_dir='logs/lunar_lander/3step_dueling_ddqn_softtarget_v0_0',
-                 log_dir='tests/lunar_lander/random_n_step_dueling_ddqn_softtarget_v0_1',
-                 history_length=1,
-                 double=True,
-                 dueling=True)
+agent = DQNAgent(
+    env_name=env_name,
+    # log_dir='logs/lunar_lander/3step_dueling_ddqn_softtarget_v0_0',
+    log_dir=
+    'logs/lunar_lander/random_20n_step_uncareful_sample_dueling_ddqn_softtarget_v0_2',
+    history_length=1,
+    double=True,
+    dueling=True)
 # Train
-agent.train(num_steps=num_steps,
-            n_step=4,
-            learning_rate=learning_rate_schedule,
-            exploration_schedule=exploration_schedule,
-            replay_buffer_size=2e4,
-            target_update_freq=10,
-            target_soft_update=0.01,
-            log_steps=1e4)
+agent.train(
+    num_steps=num_steps,
+    n_step=20,
+    learning_rate=learning_rate_schedule,
+    exploration_schedule=exploration_schedule,
+    replay_buffer_size=2e4,
+    target_update_freq=10,
+    target_soft_update=0.01,
+    log_steps=1e4)

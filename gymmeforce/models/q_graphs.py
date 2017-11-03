@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def deepmind_graph(states, num_actions, scope, dueling=False, reuse=None):
     ''' Network graph from DeepMind '''
     with tf.variable_scope(scope, reuse=reuse):
@@ -31,6 +32,7 @@ def deepmind_graph(states, num_actions, scope, dueling=False, reuse=None):
                 q_values = tf.layers.dense(net, num_actions, name='Q_{}'.format(scope))
 
         return q_values
+
 
 def simple_graph(states, num_actions, scope, dueling=False, reuse=None):
     ''' Simple fully connected graph '''

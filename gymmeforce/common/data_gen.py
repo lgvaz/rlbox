@@ -18,5 +18,7 @@ class DataGenerator:
             start = i_batch * batch_size
             end = start + batch_size
 
-            yield {placeholder: data[start : end] for placeholder, data
-                   in zip(self.placeholders, self.data)}
+            yield {
+                placeholder: data[start:end]
+                for placeholder, data in zip(self.placeholders, self.data)
+            }

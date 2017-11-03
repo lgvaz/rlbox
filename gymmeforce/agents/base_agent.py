@@ -1,18 +1,23 @@
 import os
+
 import gym
 import numpy as np
 import tensorflow as tf
 from gym import wrappers
-from gymmeforce.common.utils import Scaler
+
 from gymmeforce.common.print_utils import Logger
+from gymmeforce.common.utils import Scaler
 
 
 # TODO: Maybe wrap env outside of class??
-# TODO: Record frequency as an argument
-# TODO: Change video dir when evaluating
 class BaseAgent:
-    def __init__(self, env_name, log_dir='data/examples',
-                 env_wrapper=None, scale_states=False, debug=False, **kwargs):
+    def __init__(self,
+                 env_name,
+                 log_dir='data/examples',
+                 env_wrapper=None,
+                 scale_states=False,
+                 debug=False,
+                 **kwargs):
         self.env_name = env_name
         self.log_dir = log_dir
         self.env_wrapper = env_wrapper
@@ -20,10 +25,7 @@ class BaseAgent:
         self.logger = Logger(debug)
         self.model = None
         self.sess = None
-        self.env_config = {
-            'env_name': env_name,
-            'env_wrapper': env_wrapper
-        }
+        self.env_config = {'env_name': env_name, 'env_wrapper': env_wrapper}
 
         env = gym.make(env_name)
         # Adds additional wrappers
@@ -60,8 +62,7 @@ class BaseAgent:
             env=env,
             directory=monitor_path,
             resume=True,
-            video_callable=lambda x: record_freq is not None and x % record_freq == True
-        )
+            video_callable=lambda x: record_freq is not None and x % record_freq == True)
         if self.env_wrapper is not None:
             env = self.env_wrapper(monitored_env)
         else:

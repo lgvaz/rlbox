@@ -5,7 +5,6 @@ from collections import defaultdict
 from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 
-# TODO: Global steps
 class BaseModel:
     def __init__(self, env_config, log_dir='logs/examples', **kwargs):
         self.env_config = env_config
@@ -17,13 +16,12 @@ class BaseModel:
         self._writer = None
 
         self.global_step_sy = tf.Variable(1, name='global_step', trainable=False)
-        placeholders_config = {
-            'add_to_global_step': [[], tf.int32]
-        }
+        placeholders_config = {'add_to_global_step': [[], tf.int32]}
         self._create_placeholders(placeholders_config)
-        self.increase_global_step_op = tf.assign_add(self.global_step_sy,
-                                                     self.placeholders['add_to_global_step'],
-                                                     name='increase_global_step')
+        self.increase_global_step_op = tf.assign_add(
+            self.global_step_sy,
+            self.placeholders['add_to_global_step'],
+            name='increase_global_step')
 
     def _create_placeholders(self, config):
         for name, (shape, dtype) in config.items():
@@ -31,7 +29,8 @@ class BaseModel:
 
     def _maybe_create_writer(self):
         if self._writer is None:
-            self._writer = tf.summary.FileWriter(self.log_dir, graph=tf.get_default_graph())
+            self._writer = tf.summary.FileWriter(
+                self.log_dir, graph=tf.get_default_graph())
 
     def _maybe_create_saver(self):
         if self._saver is None:
@@ -85,8 +84,11 @@ class BaseModel:
         self._writer.add_summary(summary, step)
 
     def increase_global_step(self, sess, value):
-        sess.run(self.increase_global_step_op,
-                 feed_dict={self.placeholders['add_to_global_step']: value})
+        sess.run(
+            self.increase_global_step_op,
+            feed_dict={
+                self.placeholders['add_to_global_step']: value
+            })
 
     def get_global_step(self, sess):
         return tf.train.global_step(sess, self.global_step_sy)

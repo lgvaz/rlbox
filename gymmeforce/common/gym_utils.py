@@ -25,5 +25,3 @@ class EpisodeRunner:
             self.state = next_state
 
         return trajectory
-
-

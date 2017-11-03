@@ -1,8 +1,9 @@
 import os
 import random
+from collections import deque
+
 import numpy as np
 import tensorflow as tf
-from collections import deque
 from scipy.signal import lfilter
 
 
@@ -15,6 +16,7 @@ class RingBuffer:
         state_shape: Shape of state (tuple)
         maxlen: How many states to stack
     '''
+
     def __init__(self, state_shape, maxlen):
         self.state_shape = state_shape
         self.maxlen = maxlen
@@ -22,7 +24,7 @@ class RingBuffer:
         self.reset()
 
     def reset(self):
-        self.data = np.zeros(((self.maxlen,) + self.state_shape))
+        self.data = np.zeros(((self.maxlen, ) + self.state_shape))
 
     def append(self, data):
         self.data = np.roll(self.data, -1, axis=0)
@@ -44,6 +46,7 @@ class ReplayBuffer:
         history_length: Number of sequential states stacked when sampling
         batch_size: Mini-batch size created by sample
     '''
+
     def __init__(self, maxlen, history_length=1, batch_size=32, n_step=1):
         self.maxlen = maxlen
         self.history_length = history_length
@@ -58,8 +61,7 @@ class ReplayBuffer:
             self.initialized = True
             state_shape = np.squeeze(state).shape
             # Allocate memory
-            self.states = np.empty((self.maxlen,) + state_shape,
-                                   dtype=state.dtype)
+            self.states = np.empty((self.maxlen, ) + state_shape, dtype=state.dtype)
             self.actions = np.empty(self.maxlen, dtype=np.int32)
             self.rewards = np.empty(self.maxlen, dtype=np.float32)
             self.dones = np.empty(self.maxlen, dtype=np.bool)
@@ -91,15 +93,12 @@ class ReplayBuffer:
         # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
 
-        return (b_states_t.swapaxes(1, -1),
-                b_states_tp1.swapaxes(1, -1),
-                actions, rewards[:, :n_step], dones[:, :n_step])
+        return (b_states_t.swapaxes(1, -1), b_states_tp1.swapaxes(1, -1), actions,
+                rewards[:, :n_step], dones[:, :n_step])
 
     def _generate_idxs(self):
-        start_idxs = np.random.randint(self.current_len
-                                       - self.history_length
-                                       - self.n_step,
-                                       size=self.batch_size)
+        start_idxs = np.random.randint(
+            self.current_len - self.history_length - self.n_step, size=self.batch_size)
         end_idxs = start_idxs + self.history_length
         # start_idxs = []
         # end_idxs = []
@@ -162,15 +161,15 @@ class Scaler(object):
             new_data_mean_sq = np.square(new_data_mean)
             new_means = ((self.means * self.m) + (new_data_mean * n)) / (self.m + n)
             self.vars = (((self.m * (self.vars + np.square(self.means))) +
-                          (n * (new_data_var + new_data_mean_sq))) / (self.m + n) -
-                         np.square(new_means))
+                          (n * (new_data_var + new_data_mean_sq))) /
+                         (self.m + n) - np.square(new_means))
             self.vars = np.maximum(0.0, self.vars)  # occasionally goes negative, clip
             self.means = new_means
             self.m += n
 
     def get(self):
         """ returns 2-tuple: (scale, offset) """
-        return 1/(np.sqrt(self.vars) + 0.1)/3, self.means
+        return 1 / (np.sqrt(self.vars) + 0.1) / 3, self.means
 
 
 def strided_axis0(a, L):
@@ -179,15 +178,15 @@ def strided_axis0(a, L):
     '''
     # Store the shape and strides info
     shp = a.shape
-    s  = a.strides
+    s = a.strides
 
     # Compute length of output array along the first axis
-    nd0 = shp[0]-L+1
+    nd0 = shp[0] - L + 1
 
     # Setup shape and strides for use with np.lib.stride_tricks.as_strided
     # and get (n+1) dim output array
-    shp_in = (nd0,L)+shp[1:]
-    strd_in = (s[0],) + s
+    shp_in = (nd0, L) + shp[1:]
+    strd_in = (s[0], ) + s
     return np.lib.stride_tricks.as_strided(a, shape=shp_in, strides=strd_in)
 
 
@@ -204,8 +203,7 @@ def load_q_func(sess, log_dir):
     state_input_ph = tf.get_collection('state_input')[0]
 
     def compute_q_values(state):
-        q_values = sess.run(q_values_tensor,
-                            feed_dict={state_input_ph: state})
+        q_values = sess.run(q_values_tensor, feed_dict={state_input_ph: state})
         return q_values
 
     return compute_q_values
@@ -213,7 +211,7 @@ def load_q_func(sess, log_dir):
 
 def exponential_decay(epsilon_final, stop_exploration):
     ''' Calculate epsilon based on an exponential interpolation '''
-    epsilon_step = - np.log(epsilon_final) / stop_exploration
+    epsilon_step = -np.log(epsilon_final) / stop_exploration
 
     def get_epsilon(step):
         if step <= stop_exploration:
@@ -226,7 +224,7 @@ def exponential_decay(epsilon_final, stop_exploration):
 
 def linear_decay(epsilon_final, stop_exploration, epsilon_start=1):
     ''' Calculates epsilon based on a linear interpolation '''
-    epsilon_step = - (epsilon_start - epsilon_final) / stop_exploration
+    epsilon_step = -(epsilon_start - epsilon_final) / stop_exploration
     epsilon_steps = []
 
     def get_epsilon(step):
@@ -244,15 +242,20 @@ def piecewise_linear_decay(boundaries, values, initial_value=1):
     final_epsilons = [initial_value * value for value in values]
     final_epsilons = [initial_value] + final_epsilons
 
-    decay_steps = [end_step - start_step for start_step, end_step
-                   in zip(boundaries[:-1], boundaries[1:])]
+    decay_steps = [
+        end_step - start_step
+        for start_step, end_step in zip(boundaries[:-1], boundaries[1:])
+    ]
 
-    decay_rates = [- (start_e - final_e) / decay_step
-                   for start_e, final_e, decay_step
-                   in zip(final_epsilons[:-1], final_epsilons[1:], decay_steps)]
+    decay_rates = [
+        -(start_e - final_e) / decay_step
+        for start_e, final_e, decay_step in zip(final_epsilons[:-1], final_epsilons[1:],
+                                                decay_steps)
+    ]
 
     def get_epsilon(x):
-        for boundary, x0, m, y0 in zip(boundaries[1:], boundaries[:-1], decay_rates, final_epsilons):
+        for boundary, x0, m, y0 in zip(boundaries[1:], boundaries[:-1], decay_rates,
+                                       final_epsilons):
             if x <= boundary:
                 return m * (x - x0) + y0
 
@@ -290,9 +293,11 @@ def tf_copy_params_op(from_scope, to_scope, soft_update=1.):
     from_scope_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, from_scope)
     to_scope_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, to_scope)
     # Create operations that copy the variables
-    op_holder = [to_scope_var.assign(soft_update * from_scope_var
-                                     + (1 - soft_update) * to_scope_var)
-                 for from_scope_var, to_scope_var in zip(from_scope_vars, to_scope_vars)]
+    op_holder = [
+        to_scope_var.assign(soft_update * from_scope_var +
+                            (1 - soft_update) * to_scope_var)
+        for from_scope_var, to_scope_var in zip(from_scope_vars, to_scope_vars)
+    ]
 
     return op_holder
 

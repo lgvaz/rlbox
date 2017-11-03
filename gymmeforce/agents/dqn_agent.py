@@ -1,9 +1,9 @@
 import numpy as np
-import tensorflow as tf
+
+from gymmeforce.agents import ReplayAgent
+from gymmeforce.common.gym_utils import EpisodeRunner
 from gymmeforce.common.utils import calculate_n_step_return
 from gymmeforce.models import DQNModel
-from gymmeforce.common.gym_utils import EpisodeRunner
-from gymmeforce.agents import ReplayAgent
 
 
 class DQNAgent(ReplayAgent):
@@ -28,10 +28,21 @@ class DQNAgent(ReplayAgent):
 
         return action
 
-    def train(self, num_steps, n_step, learning_rate, exploration_schedule,
-              replay_buffer_size, target_update_freq, target_soft_update=1.,
-              gamma=0.99, clip_norm=10, learning_freq=4,
-              init_buffer_size=0.05, batch_size=32, record_freq=None, log_steps=2e4):
+    def train(self,
+              num_steps,
+              n_step,
+              learning_rate,
+              exploration_schedule,
+              replay_buffer_size,
+              target_update_freq,
+              target_soft_update=1.,
+              gamma=0.99,
+              clip_norm=10,
+              learning_freq=4,
+              init_buffer_size=0.05,
+              batch_size=32,
+              record_freq=None,
+              log_steps=2e4):
         '''
         Trains the agent following these steps:
             0. Populate replay buffer (init_buffer_size) with transitions of a random agent
@@ -67,7 +78,8 @@ class DQNAgent(ReplayAgent):
         monitored_env, env = self._create_env('videos/train', record_freq)
         ep_runner = EpisodeRunner(env)
 
-        self._populate_replay_buffer(ep_runner, replay_buffer_size, init_buffer_size, batch_size, n_step)
+        self._populate_replay_buffer(ep_runner, replay_buffer_size, init_buffer_size,
+                                     batch_size, n_step)
         # Create training ops
         self.model.create_training_op(gamma, clip_norm, target_soft_update)
         # Create Session
@@ -123,5 +135,6 @@ class DQNAgent(ReplayAgent):
                 self.logger.add_log('Learning Rate', lr, precision=5)
                 self.logger.add_log('Exploration Rate', self.epsilon, precision=3)
                 self.logger.timeit(log_steps, max_steps=num_steps)
-                self.logger.log('Step {}/{} ({:.2f}%)'.format(
-                    i_step, int(num_steps), 100 * i_step / num_steps))
+                self.logger.log('Step {}/{} ({:.2f}%)'.format(i_step,
+                                                              int(num_steps),
+                                                              100 * i_step / num_steps))

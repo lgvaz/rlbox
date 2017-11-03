@@ -1,17 +1,18 @@
 import numpy as np
-import tensorflow as tf
+
 from gymmeforce.agents import VanillaPGAgent
 from gymmeforce.common.utils import discounted_sum_rewards
 
 
-# TODO actor-critic MUST use a baseline/value_fn
 class ActorCriticAgent(VanillaPGAgent):
     def __init__(self, env_name, **kwargs):
         super().__init__(env_name, use_baseline=True, **kwargs)
 
     def _add_advantages_and_vtarget(self, trajectory):
-        trajectory['baseline'] = self.model.compute_baseline(self.sess, trajectory['states'])
-        td_target = trajectory['rewards'] + self.gamma * np.append(trajectory['baseline'][1:], 0)
+        trajectory['baseline'] = self.model.compute_baseline(self.sess,
+                                                             trajectory['states'])
+        td_target = trajectory['rewards'] + self.gamma * np.append(
+            trajectory['baseline'][1:], 0)
         if self.use_gae:
             td_residual = td_target - trajectory['baseline']
             gae = discounted_sum_rewards(td_residual, self.gamma * self.gae_lambda)

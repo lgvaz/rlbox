@@ -1,4 +1,5 @@
 import numpy as np
+
 from gymmeforce.agents import BaseAgent
 
 
@@ -27,10 +28,12 @@ class BatchAgent(BaseAgent):
             actions.append(action)
             rewards.append(reward)
 
-        trajectory = {'states': np.array(states),
-                      'unscaled_states': np.array(unscaled_states),
-                      'actions': np.array(actions),
-                      'rewards': np.array(rewards)}
+        trajectory = {
+            'states': np.array(states),
+            'unscaled_states': np.array(unscaled_states),
+            'actions': np.array(actions),
+            'rewards': np.array(rewards)
+        }
 
         return trajectory
 

@@ -1,6 +1,7 @@
 from gymmeforce.agents import ActorCriticAgent
 from gymmeforce.models import PPOModel
 
+
 class PPOAgent(ActorCriticAgent):
     '''
     Proximal Policy Optimization as described in (https://arxiv.org/pdf/1707.06347.pdf)
@@ -28,5 +29,6 @@ class PPOAgent(ActorCriticAgent):
             (default None)
         log_dir: Directory used for writing logs (default 'logs/examples')
     '''
+
     def _create_model(self, **kwargs):
         return PPOModel(self.env_config, **kwargs)

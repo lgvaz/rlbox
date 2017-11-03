@@ -1,7 +1,8 @@
 import time
-from datetime import timedelta
-import numpy as np
 from collections import defaultdict
+from datetime import timedelta
+
+import numpy as np
 
 
 class Logger:
@@ -28,8 +29,10 @@ class Logger:
 
     def log(self, header=None):
         ''' Write the mean of the values added to each key and clear previous values '''
-        avg_dict = {key: '{:.{prec}f}'.format(np.mean(value), prec=self.precision[key])
-                    for key, value in self.logs.items()}
+        avg_dict = {
+            key: '{:.{prec}f}'.format(np.mean(value), prec=self.precision[key])
+            for key, value in self.logs.items()
+        }
 
         # Log to the console
         self.logs = defaultdict(list)

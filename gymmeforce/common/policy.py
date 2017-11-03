@@ -1,16 +1,23 @@
 import tensorflow as tf
+
 from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
 
 
 class Policy:
-    def __init__(self, env_config, states_ph, actions_ph, graph,
-                 scope='policy', reuse=None, trainable=True):
+    def __init__(self,
+                 env_config,
+                 states_ph,
+                 actions_ph,
+                 graph,
+                 scope='policy',
+                 reuse=None,
+                 trainable=True):
         with tf.variable_scope(scope):
             self.states_ph = states_ph
             self.actions_ph = actions_ph
 
-            params = graph(states_ph, env_config, scope='graph',
-                           reuse=reuse, trainable=trainable)
+            params = graph(
+                states_ph, env_config, scope='graph', reuse=reuse, trainable=trainable)
             if env_config['action_space'] == 'discrete':
                 print('Making Discrete Policy with scope ({})'.format(scope))
                 self.dist_function = CategoricalDist
@@ -18,9 +25,10 @@ class Policy:
             elif env_config['action_space'] == 'continuous':
                 print('Making Continuous Policy with scope ({})'.format(scope))
                 self.dist_function = DiagGaussianDist
-                self.dist = DiagGaussianDist(params,
-                                            low_bound=env_config['action_low_bound'],
-                                            high_bound=env_config['action_high_bound'])
+                self.dist = DiagGaussianDist(
+                    params,
+                    low_bound=env_config['action_low_bound'],
+                    high_bound=env_config['action_high_bound'])
             else:
                 raise ValueError('{} action space not implemented'.format(
                     env_config['action_space']))
