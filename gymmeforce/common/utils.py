@@ -281,7 +281,7 @@ def discounted_sum_rewards(rewards, gamma=0.99):
 def calculate_n_step_return(rewards, dones, gamma=0.99):
     done_idx = np.where(dones == 1)[0]
     done = False
-    if done_idx:
+    if np.any(done_idx):
         rewards = rewards[:done_idx[0] + 1]
         done = True
 
