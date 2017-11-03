@@ -121,7 +121,7 @@ class DQNAgent(ReplayAgent):
             if i_step % log_steps == 0:
                 self.model.increase_global_step(self.sess, log_steps)
                 # Save model
-                # self.model.save(self.sess, i_step)
+                self.model.save(self.sess)
                 # Calculate rewards statistics
                 ep_rewards = monitored_env.get_episode_rewards()
                 num_episodes_old = num_episodes
