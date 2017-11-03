@@ -66,9 +66,8 @@ class ReplayBuffer:
 
             # Function for selecting multiple slices
             self.states_stride_history = strided_axis0(self.states, self.history_length)
-            if self.n_step > 1:
-                self.rewards_stride_nstep = strided_axis0(self.rewards, self.n_step)
-                self.dones_stride_nstep = strided_axis0(self.dones, self.n_step)
+            self.rewards_stride_nstep = strided_axis0(self.rewards, self.n_step)
+            self.dones_stride_nstep = strided_axis0(self.dones, self.n_step)
 
         # Store transition
         self.states[self.current_idx] = np.squeeze(state)
@@ -87,13 +86,8 @@ class ReplayBuffer:
         # Get states
         b_states_t = self.states_stride_history[start_idxs]
         b_states_tp1 = self.states_stride_history[start_idxs + n_step]
-
-        if self.n_step > 1:
-            rewards = self.rewards_stride_nstep[end_idxs - 1]
-            dones = self.dones_stride_nstep[end_idxs - 1]
-        else:
-            rewards = self.rewards[end_idxs - 1]
-            dones = self.dones[end_idxs - 1]
+        rewards = self.rewards_stride_nstep[end_idxs - 1]
+        dones = self.dones_stride_nstep[end_idxs - 1]
         # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
 
