@@ -93,8 +93,15 @@ class ReplayBuffer:
         # Remember that when slicing the end_idx is not included
         actions = self.actions[end_idxs - 1]
 
-        return (b_states_t.swapaxes(1, -1), b_states_tp1.swapaxes(1, -1), actions,
-                rewards[:, :n_step], dones[:, :n_step])
+        batch = {
+            'states_t': b_states_t.swapaxes(1, -1),
+            'states_tp1': b_states_tp1.swapaxes(1, -1),
+            'actions': actions,
+            'rewards': rewards[:, :n_step],
+            'dones': dones[:, :n_step]
+        }
+
+        return batch
 
     def _generate_idxs(self):
         start_idxs = np.random.randint(

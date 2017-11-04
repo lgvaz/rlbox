@@ -14,6 +14,34 @@ class DQNAgent(ReplayAgent):
     def _create_model(self, **kwargs):
         self.model = DQNModel(self.env_config, **kwargs)
 
+    def _calculate_n_step_return(self, batch):
+        batch['rewards'], batch['dones'] = zip(*[
+            calculate_n_step_return(r, d)
+            for r, d in zip(batch['rewards'], batch['dones'])
+        ])
+
+    def _calculate_learning_rate(self):
+        # Calculate learning rate
+        if callable(self.learning_rate):
+            lr = self.learning_rate(self.i_step)
+        else:
+            lr = self.learning_rate
+
+        return lr
+
+    def _get_batch(self):
+        if self.randomize_n_step == True:
+            random_n_step = np.random.randint(1, self.n_step + 1)
+        else:
+            random_n_step = self.n_step
+
+        batch = self.replay_buffer.sample(random_n_step)
+        self._calculate_n_step_return(batch)
+        batch['learning_rate'] = self._calculate_learning_rate()
+        batch['n_step'] = random_n_step
+
+        return batch
+
     def select_action(self, state):
         # Concatenates <history_length> states
         self.states_history.append(state)
@@ -35,6 +63,7 @@ class DQNAgent(ReplayAgent):
               exploration_schedule,
               replay_buffer_size,
               target_update_freq,
+              randomize_n_step=False,
               target_soft_update=1.,
               gamma=0.99,
               clip_norm=10,
@@ -63,6 +92,7 @@ class DQNAgent(ReplayAgent):
                                   (see utils.linear_decay as an example)
             replay_buffer_size: Maximum number of transitions stored on replay buffer
             target_update_freq: Number of steps between each target update
+            randomize_n_step: Choose a random n_step (from 1 to n_step) each batch
             target_soft_update: Percentage of online weigth value to copy to target on
                                 each update, (e.g. 1 makes target weights = online weights)
             gamma: Discount factor on sum of rewards
@@ -72,8 +102,12 @@ class DQNAgent(ReplayAgent):
             init_buffer_size: Percentage of buffer filled with random transitions
                               before the training starts
             batch_size: Number of samples to use when creating mini-batch from replay buffer
+            record_freq: Number of episodes between each recording
             log_steps: Number of steps between each log status
         '''
+        self.n_step = n_step
+        self.randomize_n_step = randomize_n_step
+        self.learning_rate = learning_rate
         # Create enviroment
         monitored_env, env = self._create_env('videos/train', record_freq)
         ep_runner = EpisodeRunner(env)
@@ -91,7 +125,8 @@ class DQNAgent(ReplayAgent):
         reward_sum = 0
         # TODO: soft updating here, need to hard copy weights
         self.model.update_target_net(self.sess)
-        for i_step in range(1, int(num_steps) + 1):
+        for i_step in range(self.model.get_global_step(self.sess), int(num_steps) + 1):
+            self.i_step = i_step
             self.epsilon = exploration_schedule(i_step)
             trajectory = self._play_and_add_to_buffer(ep_runner)
             reward_sum += trajectory['reward']
@@ -102,17 +137,8 @@ class DQNAgent(ReplayAgent):
 
             # Perform gradient descent
             if i_step % learning_freq == 0:
-                # Get batch to train on
-                random_n_step = np.random.randint(1, n_step + 1)
-                b_s, b_s_, b_a, b_r, b_d = self.replay_buffer.sample(random_n_step)
-                # Calculate n_step rewards
-                b_r, b_d = zip(*[calculate_n_step_return(r, d) for r, d in zip(b_r, b_d)])
-                # Calculate learning rate
-                if callable(learning_rate):
-                    lr = learning_rate(i_step)
-                else:
-                    lr = learning_rate
-                self.model.fit(self.sess, lr, b_s, b_s_, b_a, b_r, b_d, random_n_step)
+                batch = self._get_batch()
+                self.model.fit(self.sess, batch)
 
             # Update target network
             if i_step % target_update_freq == 0:
@@ -132,7 +158,7 @@ class DQNAgent(ReplayAgent):
                 self.model.write_logs(self.sess)
                 # Write logs
                 self.logger.add_log('Reward/Episode (unclipped)', mean_ep_rewards)
-                self.logger.add_log('Learning Rate', lr, precision=5)
+                self.logger.add_log('Learning Rate', batch['learning_rate'], precision=5)
                 self.logger.add_log('Exploration Rate', self.epsilon, precision=3)
                 self.logger.timeit(log_steps, max_steps=num_steps)
                 self.logger.log('Step {}/{} ({:.2f}%)'.format(i_step,
