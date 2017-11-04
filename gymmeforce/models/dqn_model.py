@@ -85,20 +85,19 @@ class DQNModel(BaseModel):
                 tf.multiply(self.q_target_tp1, best_actions_onehot), axis=1)
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)
+
         td_target = (self.placeholders['rewards'] + (1 - self.placeholders['dones']) *
                      (gamma**self.placeholders['n_step']) * q_tp1)
-        errors = tf.losses.huber_loss(labels=td_target, predictions=q_t)
-        self.total_error = tf.reduce_mean(errors)
+        tf.losses.huber_loss(labels=td_target, predictions=q_t)
 
         # Create training operation
-        opt = tf.train.AdamOptimizer(self.placeholders['learning_rate'], epsilon=1e-4)
-        # Clip gradients
+        opt_config = dict(epsilon=1e-4)
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
-        grads_and_vars = opt.compute_gradients(self.total_error, online_vars)
-        with tf.variable_scope('gradient_clipping'):
-            clipped_grads = [(tf.clip_by_norm(grad, clip_norm), var)
-                             for grad, var in grads_and_vars if grad is not None]
-        self.training_op = opt.apply_gradients(clipped_grads)
+        self._create_training_op(
+            learning_rate=self.placeholders['learning_rate'],
+            var_list=online_vars,
+            opt_config=opt_config,
+            clip_norm=clip_norm)
 
     def _build_target_update_op(self, target_soft_update=1.):
         self.update_target_op = tf_copy_params_op('online', 'target', target_soft_update)

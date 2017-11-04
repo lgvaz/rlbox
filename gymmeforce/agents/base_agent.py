@@ -81,6 +81,11 @@ class BaseAgent:
     def select_action(self, state):
         raise NotImplementedError
 
+    def train(self):
+        # Create Session
+        self._maybe_create_tf_sess()
+        self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
+
     def scale_state(self, state):
         scale, offset = self.scaler.get()
         return (state - offset) * scale

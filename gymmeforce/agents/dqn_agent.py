@@ -48,6 +48,7 @@ class DQNAgent(ReplayAgent):
         state_hist = self.states_history.get_data()
 
         # Select action based on an egreedy policy
+        self.epsilon = self.exploration_schedule(self.i_step)
         if np.random.random() <= self.epsilon:
             action = np.random.choice(self.env_config['num_actions'])
         else:
@@ -105,29 +106,27 @@ class DQNAgent(ReplayAgent):
             record_freq: Number of episodes between each recording
             log_steps: Number of steps between each log status
         '''
+        # Create training ops
+        self.model.create_training_op(gamma, clip_norm, target_soft_update)
+        super().train()
         self.n_step = n_step
         self.randomize_n_step = randomize_n_step
         self.learning_rate = learning_rate
+        self.exploration_schedule = exploration_schedule
+        self.i_step = self.model.get_global_step(self.sess)
         # Create enviroment
         monitored_env, env = self._create_env('videos/train', record_freq)
         ep_runner = EpisodeRunner(env)
 
         self._populate_replay_buffer(ep_runner, replay_buffer_size, init_buffer_size,
                                      batch_size, n_step)
-        # Create training ops
-        self.model.create_training_op(gamma, clip_norm, target_soft_update)
-        # Create Session
-        self._maybe_create_tf_sess()
-        self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
 
         print('Started training')
         num_episodes = 0
         reward_sum = 0
         # TODO: soft updating here, need to hard copy weights
         self.model.update_target_net(self.sess)
-        for i_step in range(self.model.get_global_step(self.sess), int(num_steps) + 1):
-            self.i_step = i_step
-            self.epsilon = exploration_schedule(i_step)
+        while True:
             trajectory = self._play_and_add_to_buffer(ep_runner)
             reward_sum += trajectory['reward']
 
@@ -136,15 +135,16 @@ class DQNAgent(ReplayAgent):
                 reward_sum = 0
 
             # Perform gradient descent
-            if i_step % learning_freq == 0:
+            if self.i_step % learning_freq == 0:
                 batch = self._get_batch()
                 self.model.fit(self.sess, batch)
 
             # Update target network
-            if i_step % target_update_freq == 0:
+            if self.i_step % target_update_freq == 0:
                 self.model.update_target_net(self.sess)
 
-            if i_step % log_steps == 0:
+            # Write logs
+            if self.i_step % log_steps == 0:
                 self.model.increase_global_step(self.sess, log_steps)
                 # Save model
                 self.model.save(self.sess)
@@ -161,6 +161,10 @@ class DQNAgent(ReplayAgent):
                 self.logger.add_log('Learning Rate', batch['learning_rate'], precision=5)
                 self.logger.add_log('Exploration Rate', self.epsilon, precision=3)
                 self.logger.timeit(log_steps, max_steps=num_steps)
-                self.logger.log('Step {}/{} ({:.2f}%)'.format(i_step,
-                                                              int(num_steps),
-                                                              100 * i_step / num_steps))
+                self.logger.log('Step {}/{} ({:.2f}%)'.format(
+                    self.i_step, int(num_steps), 100 * self.i_step / num_steps))
+
+            self.i_step += 1
+            # Check for termination
+            if self.i_step >= num_steps:
+                break

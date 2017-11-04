@@ -34,7 +34,8 @@ class VanillaPGModel(BaseModel):
             self.baseline_target = self.placeholders['returns']
 
         self._add_losses()
-        self._create_training_op(self.placeholders['learning_rate'])
+        self._create_training_op(
+            self.placeholders['learning_rate'], opt_config=dict(epsilon=1e-5))
 
     def _set_placeholders_config(self):
         ''' Modify this method to add new placeholders '''

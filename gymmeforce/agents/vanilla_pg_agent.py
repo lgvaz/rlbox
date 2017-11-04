@@ -70,8 +70,7 @@ class VanillaPGAgent(BatchAgent):
               record_freq=None,
               max_episode_steps=None):
         self.gamma = gamma
-        self._maybe_create_tf_sess()
-        self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
+        super().train()
         monitored_env, env = self._create_env(
             monitor_dir='videos/train',
             record_freq=record_freq,

@@ -36,10 +36,22 @@ class BaseModel:
         if self._saver is None:
             self._saver = tf.train.Saver()
 
-    def _create_training_op(self, learning_rate, opt=tf.train.AdamOptimizer):
-        # TODO: Change to do grad clipping and stuff
+    def _create_training_op(self,
+                            learning_rate,
+                            opt=tf.train.AdamOptimizer,
+                            opt_config=dict(),
+                            var_list=None,
+                            clip_norm=None):
         loss_sy = tf.losses.get_total_loss()
-        self.training_op = opt(learning_rate, epsilon=1e-5).minimize(loss_sy)
+        optimizer = opt(learning_rate, **opt_config)
+        grads_and_vars = optimizer.compute_gradients(loss_sy, var_list=var_list)
+
+        if clip_norm is not None:
+            with tf.variable_scope('gradient_clipping'):
+                grads_and_vars = [(tf.clip_by_norm(grad, clip_norm), var)
+                                  for grad, var in grads_and_vars if grad is not None]
+
+        self.training_op = optimizer.apply_gradients(grads_and_vars)
 
     def _create_summaries_op(self):
         self._maybe_create_writer()
