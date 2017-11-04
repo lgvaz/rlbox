@@ -25,6 +25,7 @@ agent = DQNAgent(
 agent.train(
     num_steps=num_steps,
     n_step=20,
+    random_n_step=True,
     learning_rate=learning_rate_schedule,
     exploration_schedule=exploration_schedule,
     replay_buffer_size=1e6,

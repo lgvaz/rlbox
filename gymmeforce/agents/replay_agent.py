@@ -43,4 +43,4 @@ class ReplayAgent(BaseAgent):
                         end='',
                         flush=True)
 
-        print('\rPopulating replay buffer: DONE!')
+            print('\rPopulating replay buffer: DONE!')
