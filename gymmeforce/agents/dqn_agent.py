@@ -7,9 +7,10 @@ from gymmeforce.models import DQNModel
 
 
 class DQNAgent(ReplayAgent):
-    def __init__(self, env_name, **kwargs):
+    def __init__(self, env_name, target_update_freq, **kwargs):
         super().__init__(env_name, **kwargs)
         self._create_model(**kwargs)
+        self.target_update_freq = target_update_freq
 
     def _create_model(self, **kwargs):
         self.model = DQNModel(self.env_config, **kwargs)
@@ -63,11 +64,7 @@ class DQNAgent(ReplayAgent):
               learning_rate,
               exploration_schedule,
               replay_buffer_size,
-              target_update_freq,
               randomize_n_step=False,
-              target_soft_update=1.,
-              gamma=0.99,
-              clip_norm=10,
               learning_freq=4,
               init_buffer_size=0.05,
               batch_size=32,
@@ -97,8 +94,8 @@ class DQNAgent(ReplayAgent):
             target_soft_update: Percentage of online weigth value to copy to target on
                                 each update, (e.g. 1 makes target weights = online weights)
             gamma: Discount factor on sum of rewards
-            clip_norm: Value to clip the gradient so that its L2-norm is less than or
-                       equal to clip_norm
+            grad_clip_norm: Value to clip the gradient so that its L2-norm is less than or
+                            equal to grad_clip_norm
             learning_freq: Number of steps between each gradient descent update
             init_buffer_size: Percentage of buffer filled with random transitions
                               before the training starts
@@ -106,8 +103,6 @@ class DQNAgent(ReplayAgent):
             record_freq: Number of episodes between each recording
             log_steps: Number of steps between each log status
         '''
-        # Create training ops
-        self.model.create_training_op(gamma, clip_norm, target_soft_update)
         super().train()
         self.n_step = n_step
         self.randomize_n_step = randomize_n_step
@@ -140,7 +135,7 @@ class DQNAgent(ReplayAgent):
                 self.model.fit(self.sess, batch)
 
             # Update target network
-            if self.i_step % target_update_freq == 0:
+            if self.i_step % self.target_update_freq == 0:
                 self.model.update_target_net(self.sess)
 
             # Write logs

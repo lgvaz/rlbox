@@ -6,8 +6,10 @@ from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 
 class BaseModel:
-    def __init__(self, env_config, log_dir='logs/examples', **kwargs):
+    def __init__(self, env_config, grad_clip_norm=None, log_dir='logs/examples',
+                 **kwargs):
         self.env_config = env_config
+        self.grad_clip_norm = grad_clip_norm
         self.log_dir = log_dir
         self.placeholders = {}
         self.training_op = None
@@ -40,15 +42,14 @@ class BaseModel:
                             learning_rate,
                             opt=tf.train.AdamOptimizer,
                             opt_config=dict(),
-                            var_list=None,
-                            clip_norm=None):
+                            var_list=None):
         loss_sy = tf.losses.get_total_loss()
         optimizer = opt(learning_rate, **opt_config)
         grads_and_vars = optimizer.compute_gradients(loss_sy, var_list=var_list)
 
-        if clip_norm is not None:
+        if self.grad_clip_norm is not None:
             with tf.variable_scope('gradient_clipping'):
-                grads_and_vars = [(tf.clip_by_norm(grad, clip_norm), var)
+                grads_and_vars = [(tf.clip_by_norm(grad, self.grad_clip_norm), var)
                                   for grad, var in grads_and_vars if grad is not None]
 
         self.training_op = optimizer.apply_gradients(grads_and_vars)

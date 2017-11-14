@@ -7,10 +7,20 @@ from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
 
 
 class DQNModel(BaseModel):
-    def __init__(self, env_config, graph=None, double=False, dueling=False, **kwargs):
-        super().__init__(env_config, **kwargs)
+    def __init__(self,
+                 env_config,
+                 graph=None,
+                 double=False,
+                 dueling=False,
+                 gamma=0.99,
+                 target_soft_update=1.,
+                 grad_clip_norm=10,
+                 **kwargs):
+        super().__init__(env_config, grad_clip_norm=grad_clip_norm, **kwargs)
         self.double = double
         self.dueling = dueling
+        self.gamma = gamma
+        self.target_soft_update = target_soft_update
 
         # If input is an image defaults to deepmind_graph, else simple_graph
         if graph is None:
@@ -29,9 +39,8 @@ class DQNModel(BaseModel):
 
         self._create_graphs()
 
-        # Training ops
-        self.training_op = None
-        self.update_target_op = None
+        self._build_optimization()
+        self._build_target_update_op()
 
         # Create collections for loading later
         tf.add_to_collection('state_input', self.placeholders['states_t'])
@@ -71,7 +80,7 @@ class DQNModel(BaseModel):
                 dueling=self.dueling,
                 reuse=True)
 
-    def _build_optimization(self, clip_norm, gamma):
+    def _build_optimization(self):
         # Choose only the q values for selected actions
         onehot_actions = tf.one_hot(self.placeholders['actions'],
                                     self.env_config['num_actions'])
@@ -81,13 +90,12 @@ class DQNModel(BaseModel):
         if self.double:
             best_actions_onehot = tf.one_hot(
                 tf.argmax(self.q_online_tp1, axis=1), self.env_config['num_actions'])
-            q_tp1 = tf.reduce_sum(
-                tf.multiply(self.q_target_tp1, best_actions_onehot), axis=1)
+            q_tp1 = tf.reduce_sum(self.q_target_tp1 * best_actions_onehot, axis=1)
         else:
             q_tp1 = tf.reduce_max(self.q_target_tp1, axis=1)
 
         td_target = (self.placeholders['rewards'] + (1 - self.placeholders['dones']) *
-                     (gamma**self.placeholders['n_step']) * q_tp1)
+                     (self.gamma**self.placeholders['n_step']) * q_tp1)
         tf.losses.huber_loss(labels=td_target, predictions=q_t)
 
         # Create training operation
@@ -96,11 +104,11 @@ class DQNModel(BaseModel):
         self._create_training_op(
             learning_rate=self.placeholders['learning_rate'],
             var_list=online_vars,
-            opt_config=opt_config,
-            clip_norm=clip_norm)
+            opt_config=opt_config)
 
-    def _build_target_update_op(self, target_soft_update=1.):
-        self.update_target_op = tf_copy_params_op('online', 'target', target_soft_update)
+    def _build_target_update_op(self):
+        self.update_target_op = tf_copy_params_op('online', 'target',
+                                                  self.target_soft_update)
 
     def _fetch_placeholders_data_dict(self, batch):
         '''
@@ -117,11 +125,6 @@ class DQNModel(BaseModel):
         tf.summary.scalar('network/Q_mean', tf.reduce_mean(self.q_online_t))
         tf.summary.scalar('network/Q_max', tf.reduce_max(self.q_online_t))
         tf.summary.histogram('network/q_values', self.q_online_t)
-
-    def create_training_op(self, gamma, clip_norm, target_soft_update):
-        if self.training_op is None:
-            self._build_optimization(clip_norm, gamma)
-            self._build_target_update_op(target_soft_update)
 
     def predict(self, sess, states):
         return sess.run(
