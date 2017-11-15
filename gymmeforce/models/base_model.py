@@ -70,6 +70,16 @@ class BaseModel:
         summary = sess.run(self.merged, feed_dict=feed_dict)
         self._writer.add_summary(summary, self.get_global_step(sess))
 
+    def _fetch_placeholders_data_dict(self, batch):
+        '''
+        Create a dictionary mapping placeholders to their correspondent value
+        Modify this method to include new placeholders to feed_dict used by training_op
+        '''
+        self.placeholders_and_data = {
+            self.placeholders[key]: value
+            for key, value in batch.items() if key in self.placeholders.keys()
+        }
+
     def save(self, sess, name='model'):
         self._maybe_create_saver()
         save_path = os.path.join(self.log_dir, name)

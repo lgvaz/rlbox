@@ -178,6 +178,10 @@ class Scaler(object):
         """ returns 2-tuple: (scale, offset) """
         return 1 / (np.sqrt(self.vars) + 0.1) / 3, self.means
 
+    def scale_state(self, state):
+        scale, offset = self.get()
+        return (state - offset) * scale
+
 
 def strided_axis0(a, L):
     '''

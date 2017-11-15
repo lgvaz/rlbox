@@ -21,8 +21,6 @@ class BatchAgent(BaseAgent):
             states.append(state)
             # Select and execute action
             action = self.select_action(state)
-            if self.env_config['action_space'] == 'continuous':
-                action = action[0]
             state, reward, done, _ = env.step(action)
 
             actions.append(action)
@@ -37,17 +35,20 @@ class BatchAgent(BaseAgent):
 
         return trajectory
 
-    def generate_batch(self, env, batch_timesteps):
+    def generate_trajectories(self, ep_runner, timesteps_per_batch, **kwargs):
         total_steps = 0
         trajectories = []
 
-        while total_steps < batch_timesteps:
-            trajectory = self._run_episode(env)
+        while total_steps < timesteps_per_batch:
+            trajectory = ep_runner.run_one_episode(select_action_fn=self.select_action)
             trajectories.append(trajectory)
             total_steps += trajectory['rewards'].shape[0]
 
-            unscaled = np.concatenate([traj['unscaled_states'] for traj in trajectories])
-            if self.scale_states:
+            if self.scaler is not None:
+                unscaled = np.concatenate(
+                    [traj['unscaled_states'] for traj in trajectories])
                 self.update_scaler(unscaled)
 
+        # Update global step
+        self.model.increase_global_step(self.sess, total_steps)
         return trajectories

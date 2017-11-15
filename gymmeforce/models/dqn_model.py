@@ -110,16 +110,6 @@ class DQNModel(BaseModel):
         self.update_target_op = tf_copy_params_op('online', 'target',
                                                   self.target_soft_update)
 
-    def _fetch_placeholders_data_dict(self, batch):
-        '''
-        Create a dictionary mapping placeholders to their correspondent value
-        Modify this method to include new placeholders to feed_dict used by training_op
-        '''
-        self.placeholders_and_data = {
-            self.placeholders[key]: value
-            for key, value in batch.items()
-        }
-
     def _create_summaries_op(self):
         super()._create_summaries_op()
         tf.summary.scalar('network/Q_mean', tf.reduce_mean(self.q_online_t))

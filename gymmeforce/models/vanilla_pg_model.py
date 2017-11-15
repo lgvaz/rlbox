@@ -87,17 +87,17 @@ class VanillaPGModel(BaseModel):
             graph=self.policy_graph,
             scope='policy')
 
-    def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
-        '''
-        Create a dictionary mapping placeholders to their correspondent value
-        Modify this method to include new placeholders to feed_dict used by training_op
-        '''
-        self.placeholders_and_data = {
-            self.placeholders['states']: states,
-            self.placeholders['actions']: actions,
-            self.placeholders['returns']: returns,
-            self.placeholders['advantages']: advantages
-        }
+    # def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
+    #     '''
+    #     Create a dictionary mapping placeholders to their correspondent value
+    #     Modify this method to include new placeholders to feed_dict used by training_op
+    #     '''
+    #     self.placeholders_and_data = {
+    #         self.placeholders['states']: states,
+    #         self.placeholders['actions']: actions,
+    #         self.placeholders['returns']: returns,
+    #         self.placeholders['advantages']: advantages
+    #     }
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
@@ -136,17 +136,8 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    def fit(self,
-            sess,
-            states,
-            actions,
-            returns,
-            advantages,
-            learning_rate,
-            num_epochs=10,
-            batch_size=64,
-            logger=None):
-        self._fetch_placeholders_data_dict(sess, states, actions, returns, advantages)
+    def fit(self, sess, batch, learning_rate, num_epochs=10, batch_size=64):
+        self._fetch_placeholders_data_dict(batch)
         data = DataGenerator(self.placeholders_and_data)
 
         for i_epoch in range(num_epochs):

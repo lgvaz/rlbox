@@ -51,14 +51,14 @@ class Logger:
         # Reset dict
         self.logs = defaultdict(list)
 
-    def timeit(self, steps, max_steps=None):
+    def timeit(self, steps, max_steps=-1):
         new_time = time.time()
         steps_sec = steps / (new_time - self.time)
         self.add_log('Steps/Second', steps_sec)
         self.time = new_time
         self.steps_sum += steps
 
-        if max_steps is not None:
+        if max_steps != -1:
             eta_seconds = (max_steps - self.steps_sum) / steps_sec
             # Format days, hours, minutes, seconds and remove milliseconds
             self.eta = str(timedelta(seconds=eta_seconds)).split('.')[0]
