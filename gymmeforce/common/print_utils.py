@@ -15,6 +15,7 @@ class Logger:
         self.sess = None
         self.steps_sum = 0
         self.eta = None
+        self.i_step = 0
 
     def add_tf_writer(self, sess, tf_scalar_summary_writer):
         self.sess = sess
@@ -51,7 +52,8 @@ class Logger:
         # Reset dict
         self.logs = defaultdict(list)
 
-    def timeit(self, steps, max_steps=-1):
+    def timeit(self, i_step, max_steps=-1):
+        steps, self.i_step = i_step - self.i_step, i_step
         new_time = time.time()
         steps_sec = steps / (new_time - self.time)
         self.add_log('Steps/Second', steps_sec)

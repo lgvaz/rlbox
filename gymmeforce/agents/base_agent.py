@@ -119,13 +119,12 @@ class BaseAgent:
         self.i_step = self.model.get_global_step(self.sess)
 
     def write_logs(self, batch):
-        num_steps = len(batch['rewards'])
         ep_rewards = self.train_ep_runner.monitored_env.get_episode_rewards()
 
         self.logger.add_log('Reward/Episode (Last 50)', np.mean(ep_rewards[-50:]))
         self.model.write_logs(self.sess, self.logger)
         self.logger.add_log('Learning Rate', self._calculate_learning_rate(), precision=5)
-        self.logger.timeit(num_steps, max_steps=self.max_steps)
+        self.logger.timeit(self.i_step, max_steps=self.max_steps)
 
     def update_scaler(self, states):
         self.scaler.update(states)
