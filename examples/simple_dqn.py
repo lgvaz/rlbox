@@ -9,7 +9,7 @@ env_name = 'LunarLander-v2'
 max_steps = 3e5
 learning_rate_schedule = piecewise_linear_decay(
     boundaries=[0.1 * max_steps, 0.5 * max_steps], values=[1, .1, .1], initial_value=1e-3)
-exploration_schedule = piecewise_linear_decay(
+exploration_rate = piecewise_linear_decay(
     boundaries=[0.1 * max_steps, 0.5 * max_steps],
     values=[.1, .01, .01],
     initial_value=1.)
@@ -17,7 +17,7 @@ exploration_schedule = piecewise_linear_decay(
 # Create agent
 agent = DQNAgent(
     env_name=env_name,
-    log_dir='logs/lunar_lander/random_20n_step_uncareful_sample_softtarget_v0_8',
+    log_dir='logs/lunar_lander/random_10n_step_uncareful_sample_softtarget_v0_11',
     history_length=1,
     double=True,
     dueling=True,
@@ -26,9 +26,9 @@ agent = DQNAgent(
 # Train
 agent.train(
     max_steps=max_steps,
-    n_step=20,
+    n_step=10,
     randomize_n_step=True,
     learning_rate=learning_rate_schedule,
-    exploration_schedule=exploration_schedule,
+    exploration_rate=exploration_rate,
     replay_buffer_size=2e4,
     log_steps=1e4)

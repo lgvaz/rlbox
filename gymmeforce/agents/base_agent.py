@@ -26,6 +26,8 @@ class BaseAgent:
         self.model = None
         self.sess = None
         self.env_config = {'env_name': env_name, 'env_wrapper': env_wrapper}
+        self.play_ep_runner = None
+        self.train_ep_runner = None
 
         env = gym.make(env_name)
         # Adds additional wrappers
@@ -71,7 +73,6 @@ class BaseAgent:
         return monitored_env, env
 
     def _calculate_learning_rate(self):
-        # Calculate learning rate
         if callable(self.learning_rate):
             lr = self.learning_rate(self.i_step)
         else:
@@ -102,14 +103,28 @@ class BaseAgent:
     def select_action(self, state):
         raise NotImplementedError
 
+    def play(self, exploration_rate=0.05, render=True, record_freq=1, **kwargs):
+        self.exploration_rate = exploration_rate
+        self._maybe_create_tf_sess()
+
+        # Create environment
+        if self.play_ep_runner is None:
+            monitored_env, env = self._create_env(
+                monitor_dir='videos/play', record_freq=record_freq, **kwargs)
+            self.play_ep_runner = EpisodeRunner(env, monitored_env, self.scaler)
+
+        self.play_ep_runner.run_one_episode(
+            render=render, select_action_fn=self.select_action)
+
     def train(self, max_iters=-1, max_episodes=-1, max_steps=-1, **kwargs):
         # Create Session
         self._maybe_create_tf_sess()
         self.logger.add_tf_writer(self.sess, self.model.summary_scalar)
 
         # Create environment
-        monitored_env, env = self._create_env(monitor_dir='videos/train', **kwargs)
-        self.train_ep_runner = EpisodeRunner(env, monitored_env, self.scaler)
+        if self.train_ep_runner is None:
+            monitored_env, env = self._create_env(monitor_dir='videos/train', **kwargs)
+            self.train_ep_runner = EpisodeRunner(env, monitored_env, self.scaler)
 
         self.max_iters = max_iters
         self.max_episodes = max_episodes

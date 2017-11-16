@@ -20,6 +20,14 @@ class DQNAgent(ReplayAgent):
             for r, d in zip(batch['rewards'], batch['dones'])
         ])
 
+    def _calculate_epsilon(self):
+        if callable(self.exploration_rate):
+            epsilon = self.exploration_rate(self.i_step)
+        else:
+            epsilon = self.exploration_rate
+
+        return epsilon
+
     def _get_batch(self):
         if self.randomize_n_step == True:
             random_n_step = np.random.randint(1, self.n_step + 1)
@@ -39,7 +47,7 @@ class DQNAgent(ReplayAgent):
         state_hist = self.states_history.get_data()
 
         # Select action based on an egreedy policy
-        self.epsilon = self.exploration_schedule(self.i_step)
+        self.epsilon = self._calculate_epsilon()
         if np.random.random() <= self.epsilon:
             action = np.random.choice(self.env_config['num_actions'])
         else:
@@ -60,7 +68,7 @@ class DQNAgent(ReplayAgent):
     def train(self,
               n_step,
               learning_rate,
-              exploration_schedule,
+              exploration_rate,
               replay_buffer_size,
               randomize_n_step=False,
               learning_freq=4,
@@ -81,7 +89,7 @@ class DQNAgent(ReplayAgent):
             learning_rate: Float or a function that returns a float
                            when called with the current time step as input
                            (see gymmeforce.utils.linear_decay as an example)
-            exploration_schedule: Function that returns a float when
+            exploration_rate:     Float or function that returns a float when
                                   called with the current time step as input
                                   (see utils.linear_decay as an example)
             replay_buffer_size: Maximum number of transitions stored on replay buffer
@@ -106,7 +114,7 @@ class DQNAgent(ReplayAgent):
         self.n_step = n_step
         self.randomize_n_step = randomize_n_step
         self.learning_rate = learning_rate
-        self.exploration_schedule = exploration_schedule
+        self.exploration_rate = exploration_rate
         self.i_step = self.model.get_global_step(self.sess)
 
         self._populate_replay_buffer(self.train_ep_runner, replay_buffer_size,
