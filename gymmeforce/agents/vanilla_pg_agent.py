@@ -26,7 +26,7 @@ class VanillaPGAgent(BatchAgent):
         log_dir: Directory used for writing logs (default 'logs/examples')
     '''
 
-    def __init__(self, env_name, normalize_advantages, **kwargs):
+    def __init__(self, env_name, normalize_advantages=False, **kwargs):
         super(VanillaPGAgent, self).__init__(env_name, **kwargs)
         self.model = self._create_model(**kwargs)
         self.normalize_advantages = normalize_advantages

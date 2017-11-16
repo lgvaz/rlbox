@@ -87,18 +87,6 @@ class VanillaPGModel(BaseModel):
             graph=self.policy_graph,
             scope='policy')
 
-    # def _fetch_placeholders_data_dict(self, sess, states, actions, returns, advantages):
-    #     '''
-    #     Create a dictionary mapping placeholders to their correspondent value
-    #     Modify this method to include new placeholders to feed_dict used by training_op
-    #     '''
-    #     self.placeholders_and_data = {
-    #         self.placeholders['states']: states,
-    #         self.placeholders['actions']: actions,
-    #         self.placeholders['returns']: returns,
-    #         self.placeholders['advantages']: advantages
-    #     }
-
     def _create_summaries_op(self):
         super()._create_summaries_op()
         tf.summary.histogram('policy/logprob', self.policy.logprob_sy)
