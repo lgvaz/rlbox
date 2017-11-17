@@ -1,1 +1,1 @@
-from gymmeforce.wrappers.atari_wrapper import wrap_deepmind
+from gymmeforce.wrappers.atari_wrapper import AtariWrapper

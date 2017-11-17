@@ -32,7 +32,7 @@ class BaseAgent:
         env = gym.make(env_name)
         # Adds additional wrappers
         if env_wrapper is not None:
-            env = env_wrapper(env)
+            env = env_wrapper.wrap_env(env)
 
         # Get env information
         state = env.reset()
@@ -66,7 +66,7 @@ class BaseAgent:
             resume=True,
             video_callable=lambda x: record_freq is not None and x % record_freq == True)
         if self.env_wrapper is not None:
-            env = self.env_wrapper(monitored_env)
+            env = self.env_wrapper.wrap_env(monitored_env)
         else:
             env = monitored_env
 

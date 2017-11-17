@@ -12,6 +12,26 @@ import numpy as np
 from gym import spaces
 
 
+class AtariWrapper:
+    def __init__(self, frame_skip=4, frame_stack=None, noop_max=30):
+        self.frame_skip = frame_skip
+        self.frame_stack = frame_stack
+        self.noop_max = noop_max
+
+    def wrap_env(self, env):
+        assert 'NoFrameskip' in env.spec.id
+        env = EpisodicLifeEnv(env)
+        env = NoopResetEnv(env, noop_max=self.noop_max)
+        env = MaxAndSkipEnv(env, skip=self.frame_skip)
+        if 'FIRE' in env.unwrapped.get_action_meanings():
+            env = FireResetEnv(env)
+        env = ProcessFrame84(env)
+        if self.frame_stack is not None:
+            env = FrameStack(env, self.frame_stack)
+        env = ClippedRewardsWrapper(env)
+        return env
+
+
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env=None, noop_max=30):
         """Sample initial states by taking random number of no-ops on reset.
@@ -167,17 +187,3 @@ class FrameStack(gym.Wrapper):
     def _observation(self):
         assert len(self.frames) == self.k
         return np.concatenate(self.frames, axis=2)
-
-
-def wrap_deepmind(env, frame_stack=None, frame_skip=4):
-    assert 'NoFrameskip' in env.spec.id
-    env = EpisodicLifeEnv(env)
-    env = NoopResetEnv(env, noop_max=30)
-    env = MaxAndSkipEnv(env, skip=frame_skip)
-    if 'FIRE' in env.unwrapped.get_action_meanings():
-        env = FireResetEnv(env)
-    env = ProcessFrame84(env)
-    if frame_stack is not None:
-        env = FrameStack(env, frame_stack)
-    env = ClippedRewardsWrapper(env)
-    return env
