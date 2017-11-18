@@ -131,7 +131,8 @@ class DQNModel(BaseModel):
     def update_target_net(self, sess):
         sess.run(self.update_target_op)
 
-    def fit(self, sess, batch):
+    def fit(self, sess, batch, learning_rate):
+        batch['learning_rate'] = learning_rate
         self._fetch_placeholders_data_dict(batch)
         sess.run(self.training_op, feed_dict=self.placeholders_and_data)
 

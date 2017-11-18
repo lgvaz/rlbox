@@ -36,7 +36,6 @@ class DQNAgent(ReplayAgent):
 
         batch = self.replay_buffer.sample(random_n_step)
         self._calculate_n_step_return(batch)
-        batch['learning_rate'] = self._calculate_learning_rate()
         batch['n_step'] = random_n_step
 
         return batch
@@ -135,7 +134,8 @@ class DQNAgent(ReplayAgent):
             # Perform gradient descent
             if self.i_step % learning_freq == 0:
                 batch = self._get_batch()
-                self.model.fit(self.sess, batch)
+                lr = self._calculate_learning_rate()
+                self.model.fit(self.sess, batch, lr)
 
             # Update target network
             if self.i_step % self.target_update_freq == 0:
