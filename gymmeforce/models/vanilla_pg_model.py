@@ -19,11 +19,8 @@ class VanillaPGModel(BaseModel):
         super(VanillaPGModel, self).__init__(env_config, **kwargs)
         self.use_baseline = use_baseline
         self.entropy_coef = entropy_coef
-
-        if policy_graph == None:
-            self.policy_graph = dense_policy_graph
-        if value_graph == None:
-            self.value_graph = dense_value_graph
+        self.policy_graph = policy_graph or dense_policy_graph
+        self.value_graph = value_graph or dense_value_graph
 
         self._set_placeholders_config()
         self._create_placeholders(self.placeholders_config)

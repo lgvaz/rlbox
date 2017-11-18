@@ -45,8 +45,6 @@ class PPOModel(VanillaPGModel):
             with tf.variable_scope('prob_ratio'):
                 self.prob_ratio = tf.exp(self.policy.logprob_sy -
                                          self.old_policy.logprob_sy)
-                # Alternatively we can use a placeholder to feed the old logprobs
-                # self.prob_ratio = tf.exp(policy.logprob_sy - self.placeholders['old_logprob'])
             self.clipped_prob_ratio = tf.clip_by_value(
                 self.prob_ratio,
                 1 - self.epsilon_clip,
@@ -62,19 +60,6 @@ class PPOModel(VanillaPGModel):
                 clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
             tf.losses.add_loss(clipped_surrogate_loss)
-
-    # This lines show an example of how to add an additional placeholder which
-    # will be fetched during the training operation
-    # def _set_placeholders_config(self):
-    #     super()._set_placeholders_config()
-    #     self.placeholders_config['old_logprob'] = [[None], tf.float32]
-
-    # def _fetch_placeholders_data_dict(self, sess, states, actions, returns):
-    #     super()._fetch_placeholders_data_dict(sess, states, actions, returns)
-    #     # Add old_logprob to feed_dict fetching
-    #     old_logprob = sess.run(self.policy.logprob_sy,
-    #                            feed_dict=self.placeholders_and_data)
-    #     self.placeholders_and_data[self.placeholders['old_logprob']] = old_logprob
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
