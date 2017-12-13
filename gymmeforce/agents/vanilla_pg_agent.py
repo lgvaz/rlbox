@@ -1,5 +1,3 @@
-import itertools
-
 import numpy as np
 
 from gymmeforce.agents import BatchAgent
