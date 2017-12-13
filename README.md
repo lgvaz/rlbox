@@ -9,6 +9,10 @@ cd gymmeforce
 pip install -e .  
 ```
 
+## How to use  
+Examples on how to run different agents can be found on the [examples](https://github.com/lgvaz/gymmeforce/tree/master/examples) folder.  
+
+
 ## About  
 [TensorFlow](https://www.tensorflow.org/) implementation of [DQN](https://www.nature.com/nature/journal/v518/n7540/full/nature14236.html?foxtrotcallback=true) for solving [OpenAI-Gym](https://gym.openai.com/) discrete environments.  
 Episode 0 ---------------- Episode 3500 ----------- Episode 6000 ----------- Episode 7500 ----------- Episode 21500  
