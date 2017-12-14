@@ -121,7 +121,7 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    def fit(self, sess, batch, learning_rate, num_epochs=10, batch_size=64):
+    def fit(self, sess, batch, learning_rate, num_epochs=10, batch_size=64, callbacks=[]):
         self._fetch_placeholders_data_dict(batch)
         data = DataGenerator(self.placeholders_and_data)
 
@@ -129,3 +129,7 @@ class VanillaPGModel(BaseModel):
             for feed_dict in data.fetch_batch_dict(batch_size):
                 feed_dict[self.placeholders['learning_rate']] = learning_rate
                 sess.run([self.training_op], feed_dict=feed_dict)
+
+            for callback in callbacks:
+                if callback(sess):
+                    break

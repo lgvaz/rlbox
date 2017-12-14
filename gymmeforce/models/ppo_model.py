@@ -6,8 +6,17 @@ from gymmeforce.common.utils import tf_copy_params_op
 
 
 class PPOModel(VanillaPGModel):
-    def __init__(self, env_config, epsilon_clip=0.2, **kwargs):
+    def __init__(self,
+                 env_config,
+                 epsilon_clip=0.2,
+                 kl_coef=1,
+                 kl_targ=0.01,
+                 kl_hinge_coef=50,
+                 **kwargs):
         self.epsilon_clip = epsilon_clip
+        self.kl_coef = kl_coef
+        self.kl_targ = 0.01
+        self.kl_hinge_coef = 50
         super().__init__(env_config, **kwargs)
 
     def _create_policy(self):
@@ -35,7 +44,8 @@ class PPOModel(VanillaPGModel):
         sess.run(self.update_old_policy_op)
 
     def _add_losses(self):
-        self._clipped_surrogate_loss()
+        # self._clipped_surrogate_loss()
+        self._kl_loss()
         self._entropy_loss()
         if self.use_baseline:
             self._baseline_loss()
@@ -45,11 +55,13 @@ class PPOModel(VanillaPGModel):
             with tf.variable_scope('prob_ratio'):
                 self.prob_ratio = tf.exp(self.policy.logprob_sy -
                                          self.old_policy.logprob_sy)
+
             self.clipped_prob_ratio = tf.clip_by_value(
                 self.prob_ratio,
                 1 - self.epsilon_clip,
                 1 + self.epsilon_clip,
                 name='clipped_prob_ratio')
+
             with tf.variable_scope('clipped_surrogate_loss'):
                 with tf.variable_scope('surrogate_objective'):
                     surrogate = self.prob_ratio * self.placeholders['advantages']
@@ -61,21 +73,54 @@ class PPOModel(VanillaPGModel):
 
             tf.losses.add_loss(clipped_surrogate_loss)
 
+    def _kl_loss(self):
+        prob_ratio = tf.exp(self.policy.logprob_sy - self.old_policy.logprob_sy)
+        surrogate = prob_ratio * self.placeholders['advantages']
+
+        kl_loss = self.kl_coef * self.kl_divergence_sy
+
+        hinge_loss = self.kl_hinge_coef * tf.maximum(
+            0.0, self.kl_divergence_sy - 2 * self.kl_targ)**2
+
+        # losses = -(tf.reduce_mean(surrogate) - tf.reduce_mean(kl_loss))
+        with tf.variable_scope('kl_penalized_surrogate_loss'):
+            losses = surrogate - kl_loss - hinge_loss
+            loss = -tf.reduce_mean(losses)
+
+        tf.losses.add_loss(loss)
+
+    def _update_kl_coef(self, sess):
+        kl = np.mean(
+            sess.run(self.kl_divergence_sy, feed_dict=self.placeholders_and_data))
+
+        if kl < self.kl_targ / 1.5:
+            self.kl_coef /= 2
+        if kl > self.kl_targ * 1.5:
+            self.kl_coef *= 2
+
+    def _kl_callback(self, sess):
+        kl = np.mean(
+            sess.run(self.kl_divergence_sy, feed_dict=self.placeholders_and_data))
+
+        if kl > 4 * self.kl_targ:
+            print('*** KL divergence too high, early stopping ***')
+            return True
+
     def _create_summaries_op(self):
         super()._create_summaries_op()
 
-        tf.summary.histogram('policy/prob_ratio', self.prob_ratio)
-        tf.summary.scalar('policy/prob_ratio/mean', tf.reduce_mean(self.prob_ratio))
-        tf.summary.scalar('policy/prob_ratio/max', tf.reduce_max(self.prob_ratio))
-        tf.summary.scalar('policy/prob_ratio/min', tf.reduce_min(self.prob_ratio))
+        # tf.summary.histogram('policy/prob_ratio', self.prob_ratio)
+        # tf.summary.scalar('policy/prob_ratio/mean', tf.reduce_mean(self.prob_ratio))
+        # tf.summary.scalar('policy/prob_ratio/max', tf.reduce_max(self.prob_ratio))
+        # tf.summary.scalar('policy/prob_ratio/min', tf.reduce_min(self.prob_ratio))
 
-        tf.summary.histogram('policy/clipped_prob_ratio', self.clipped_prob_ratio)
-        tf.summary.scalar('policy/clipped_prob_ratio/mean',
-                          tf.reduce_mean(self.clipped_prob_ratio))
-        tf.summary.scalar('policy/clipped_prob_ratio/max',
-                          tf.reduce_max(self.clipped_prob_ratio))
-        tf.summary.scalar('policy/clipped_prob_ratio/min',
-                          tf.reduce_min(self.clipped_prob_ratio))
+        # tf.summary.histogram('policy/clipped_prob_ratio', self.clipped_prob_ratio)
+        # tf.summary.scalar('policy/clipped_prob_ratio/mean',
+        #                   tf.reduce_mean(self.clipped_prob_ratio))
+        # tf.summary.scalar('policy/clipped_prob_ratio/max',
+        #                   tf.reduce_max(self.clipped_prob_ratio))
+        # tf.summary.scalar('policy/clipped_prob_ratio/min',
+        #                   tf.reduce_min(self.clipped_prob_ratio))
 
     def write_logs(self, sess, logger):
         entropy, kl = sess.run(
@@ -83,9 +128,11 @@ class PPOModel(VanillaPGModel):
             feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
+        logger.add_log('policy/KL Coefficient', self.kl_coef)
 
         self._write_summaries(sess, self.placeholders_and_data)
 
     def fit(self, sess, *args, **kwargs):
         self._update_old_policy(sess)
-        super().fit(sess, *args, **kwargs)
+        super().fit(sess, *args, callbacks=[self._kl_callback], **kwargs)
+        self._update_kl_coef(sess)
