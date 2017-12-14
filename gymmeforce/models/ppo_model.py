@@ -9,12 +9,14 @@ class PPOModel(VanillaPGModel):
     def __init__(self,
                  env_config,
                  epsilon_clip=0.2,
-                 kl_coef=1,
+                 kl_coef=1.,
                  kl_targ=0.01,
-                 kl_hinge_coef=50,
+                 kl_hinge_coef=50.,
                  **kwargs):
         self.epsilon_clip = epsilon_clip
-        self.kl_coef = kl_coef
+        self.kl_coef = tf.Variable(kl_coef, name='kl_coef', trainable=False)
+        self.double_kl_coef_op = self.kl_coef.assign(2 * self.kl_coef)
+        self.half_kl_coef_op = self.kl_coef.assign(0.5 * self.kl_coef)
         self.kl_targ = 0.01
         self.kl_hinge_coef = 50
         super().__init__(env_config, **kwargs)
@@ -89,14 +91,17 @@ class PPOModel(VanillaPGModel):
 
         tf.losses.add_loss(loss)
 
+        tf.summary.scalar('losses/kl_loss/mean', tf.reduce_mean(kl_loss))
+        tf.summary.scalar('losses/surrogate/mean', tf.reduce_mean(surrogate))
+
     def _update_kl_coef(self, sess):
         kl = np.mean(
             sess.run(self.kl_divergence_sy, feed_dict=self.placeholders_and_data))
 
         if kl < self.kl_targ / 1.5:
-            self.kl_coef /= 2
+            sess.run(self.half_kl_coef_op)
         if kl > self.kl_targ * 1.5:
-            self.kl_coef *= 2
+            sess.run(self.double_kl_coef_op)
 
     def _kl_callback(self, sess):
         kl = np.mean(
@@ -128,7 +133,7 @@ class PPOModel(VanillaPGModel):
             feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
-        logger.add_log('policy/KL Coefficient', self.kl_coef)
+        logger.add_log('policy/KL Coefficient', sess.run(self.kl_coef))
 
         self._write_summaries(sess, self.placeholders_and_data)
 
