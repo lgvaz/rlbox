@@ -132,4 +132,4 @@ class VanillaPGModel(BaseModel):
 
             for callback in callbacks:
                 if callback(sess):
-                    break
+                    return
