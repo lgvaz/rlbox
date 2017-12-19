@@ -29,7 +29,7 @@ def dense_policy_graph(inputs,
             mean = tf.layers.dense(
                 inputs=net,
                 units=env_config['num_actions'],
-                kernel_initializer=variance_scaling_initializer(factor=1),
+                kernel_initializer=variance_scaling_initializer(factor=0.1),
                 name='mean',
                 trainable=trainable)
             logstd = tf.get_variable(
@@ -37,8 +37,7 @@ def dense_policy_graph(inputs,
                 tf.float32,
                 initializer=tf.zeros_initializer(),
                 trainable=trainable)
-            # Clip logstd, because it likes to go to NaN
-            logstd = tf.clip_by_value(logstd, np.log(1e-7), -np.log(1e-7))
+
             return mean, logstd
 
         if env_config['action_space'] == 'discrete':

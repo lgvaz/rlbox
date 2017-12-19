@@ -16,7 +16,7 @@ class PPOModel(VanillaPGModel):
         self.epsilon_clip = epsilon_clip
         self.kl_coef = tf.Variable(kl_coef, name='kl_coef', trainable=False)
         self.double_kl_coef_op = self.kl_coef.assign(2 * self.kl_coef)
-        self.half_kl_coef_op = self.kl_coef.assign(0.5 * self.kl_coef)
+        self.halve_kl_coef_op = self.kl_coef.assign(0.5 * self.kl_coef)
         self.kl_targ = 0.01
         self.kl_hinge_coef = 50
         super().__init__(env_config, **kwargs)
@@ -81,8 +81,7 @@ class PPOModel(VanillaPGModel):
 
         kl_loss = self.kl_coef * self.kl_divergence_sy
 
-        hinge_loss = self.kl_hinge_coef * tf.maximum(
-            0.0, self.kl_divergence_sy - 2 * self.kl_targ)**2
+        hinge_loss = 50 * tf.maximum(0.0, self.kl_divergence_sy - 2 * self.kl_targ)**2
 
         # losses = -(tf.reduce_mean(surrogate) - tf.reduce_mean(kl_loss))
         with tf.variable_scope('kl_penalized_surrogate_loss'):
@@ -99,7 +98,7 @@ class PPOModel(VanillaPGModel):
             sess.run(self.kl_divergence_sy, feed_dict=self.placeholders_and_data))
 
         if kl < self.kl_targ / 1.5:
-            sess.run(self.half_kl_coef_op)
+            sess.run(self.halve_kl_coef_op)
         if kl > self.kl_targ * 1.5:
             sess.run(self.double_kl_coef_op)
 

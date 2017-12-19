@@ -127,4 +127,4 @@ class VanillaPGAgent(BatchAgent):
                 break
 
         # Save
-        self.model.save(self.sess)
+        self.save()

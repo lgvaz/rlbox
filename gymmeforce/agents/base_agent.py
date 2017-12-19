@@ -143,3 +143,6 @@ class BaseAgent:
 
     def update_scaler(self, states):
         self.scaler.update(states)
+
+    def save(self):
+        self.model.save(self.sess)

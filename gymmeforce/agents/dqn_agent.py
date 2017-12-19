@@ -145,7 +145,7 @@ class DQNAgent(ReplayAgent):
             if self.i_step % log_steps == 0:
                 self.model.increase_global_step(self.sess, log_steps)
                 self.write_logs(batch)
-                self.model.save(self.sess)
+                self.save()
 
             if self._step_and_check_termination():
                 break
