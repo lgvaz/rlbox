@@ -8,17 +8,22 @@ from gymmeforce.common.utils import tf_copy_params_op
 class PPOModel(VanillaPGModel):
     def __init__(self,
                  env_config,
+                 ppo_clip=True,
+                 ppo_adaptive_kl=False,
                  epsilon_clip=0.2,
                  kl_coef=1.,
                  kl_targ=0.01,
                  kl_hinge_coef=50.,
                  **kwargs):
+        self.ppo_clip = ppo_clip
+        self.ppo_adaptive_kl = ppo_adaptive_kl
         self.epsilon_clip = epsilon_clip
         self.kl_coef = tf.Variable(kl_coef, name='kl_coef', trainable=False)
+        self.kl_targ = kl_targ
+        self.kl_hinge_coef = kl_hinge_coef
         self.double_kl_coef_op = self.kl_coef.assign(2 * self.kl_coef)
         self.halve_kl_coef_op = self.kl_coef.assign(0.5 * self.kl_coef)
-        self.kl_targ = 0.01
-        self.kl_hinge_coef = 50
+
         super().__init__(env_config, **kwargs)
 
     def _create_policy(self):
@@ -33,6 +38,7 @@ class PPOModel(VanillaPGModel):
 
         self._create_old_policy_update_op()
         self._create_kl_divergence_op()
+        self._create_surrogate_objective()
 
     def _create_kl_divergence_op(self):
         self.kl_divergence_sy = self.policy.kl_divergence(self.old_policy, self.policy)
@@ -46,52 +52,48 @@ class PPOModel(VanillaPGModel):
         sess.run(self.update_old_policy_op)
 
     def _add_losses(self):
-        # self._clipped_surrogate_loss()
-        self._kl_loss()
+        if self.ppo_clip:
+            self._clipped_surrogate_loss()
+        if self.ppo_adaptive_kl:
+            self._kl_loss()
         self._entropy_loss()
+
         if self.use_baseline:
             self._baseline_loss()
 
-    def _clipped_surrogate_loss(self):
-        with tf.variable_scope('L_clip'):
-            with tf.variable_scope('prob_ratio'):
-                self.prob_ratio = tf.exp(self.policy.logprob_sy -
-                                         self.old_policy.logprob_sy)
+    def _create_surrogate_objective(self):
+        with tf.variable_scope('prob_ratio'):
+            self.prob_ratio = tf.exp(self.policy.logprob_sy - self.old_policy.logprob_sy)
+        with tf.variable_scope('surrogate_objective'):
+            self.surrogate = self.prob_ratio * self.placeholders['advantages']
 
-            self.clipped_prob_ratio = tf.clip_by_value(
+    def _clipped_surrogate_loss(self):
+        with tf.variable_scope('clipped_surrogate_objective'):
+
+            clipped_prob_ratio = tf.clip_by_value(
                 self.prob_ratio,
                 1 - self.epsilon_clip,
                 1 + self.epsilon_clip,
                 name='clipped_prob_ratio')
+            clipped_surrogate = clipped_prob_ratio * self.placeholders['advantages']
 
-            with tf.variable_scope('clipped_surrogate_loss'):
-                with tf.variable_scope('surrogate_objective'):
-                    surrogate = self.prob_ratio * self.placeholders['advantages']
-                with tf.variable_scope('clipped_surrogate_objective'):
-                    clipped_surrogate = self.clipped_prob_ratio * self.placeholders[
-                        'advantages']
-                clipped_surrogate_losses = tf.minimum(surrogate, clipped_surrogate)
-                clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
+            clipped_surrogate_losses = tf.minimum(self.surrogate, clipped_surrogate)
+            clipped_surrogate_loss = -tf.reduce_mean(clipped_surrogate_losses)
 
             tf.losses.add_loss(clipped_surrogate_loss)
 
     def _kl_loss(self):
-        prob_ratio = tf.exp(self.policy.logprob_sy - self.old_policy.logprob_sy)
-        surrogate = prob_ratio * self.placeholders['advantages']
-
-        kl_loss = self.kl_coef * self.kl_divergence_sy
-
-        hinge_loss = 50 * tf.maximum(0.0, self.kl_divergence_sy - 2 * self.kl_targ)**2
-
-        # losses = -(tf.reduce_mean(surrogate) - tf.reduce_mean(kl_loss))
         with tf.variable_scope('kl_penalized_surrogate_loss'):
-            losses = surrogate - kl_loss - hinge_loss
+            kl_loss = self.kl_coef * self.kl_divergence_sy
+            hinge_loss = self.kl_hinge_coef * tf.maximum(
+                0.0, self.kl_divergence_sy - 2 * self.kl_targ)**2
+
+            losses = self.surrogate - kl_loss - hinge_loss
             loss = -tf.reduce_mean(losses)
 
-        tf.losses.add_loss(loss)
+            tf.losses.add_loss(loss)
 
-        tf.summary.scalar('losses/kl_loss/mean', tf.reduce_mean(kl_loss))
-        tf.summary.scalar('losses/surrogate/mean', tf.reduce_mean(surrogate))
+        self.callbacks.append(self._kl_callback)
 
     def _update_kl_coef(self, sess):
         kl = np.mean(
@@ -132,11 +134,13 @@ class PPOModel(VanillaPGModel):
             feed_dict=self.placeholders_and_data)
         logger.add_log('policy/Entropy', entropy)
         logger.add_log('policy/KL Divergence', np.mean(kl), precision=4)
-        logger.add_log('policy/KL Coefficient', sess.run(self.kl_coef))
+        if self.ppo_adaptive_kl:
+            logger.add_log('policy/KL Coefficient', sess.run(self.kl_coef))
 
         self._write_summaries(sess, self.placeholders_and_data)
 
     def fit(self, sess, *args, **kwargs):
         self._update_old_policy(sess)
-        super().fit(sess, *args, callbacks=[self._kl_callback], **kwargs)
-        self._update_kl_coef(sess)
+        super().fit(sess, *args, **kwargs)
+        if self.ppo_adaptive_kl:
+            self._update_kl_coef(sess)

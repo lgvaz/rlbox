@@ -16,6 +16,7 @@ class BaseModel:
         self.merged = None
         self._saver = None
         self._writer = None
+        self.callbacks = []
 
         self.global_step_sy = tf.Variable(1, name='global_step', trainable=False)
         placeholders_config = {'add_to_global_step': [[], tf.int32]}
