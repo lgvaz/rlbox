@@ -18,7 +18,13 @@ class PPOAgent(ActorCriticAgent):
     	env_name: Gym environment name
 
     Keyword args:
+        ppo_clip: Whether or not to use the Clipped Surrogate Objective (default True)
+        ppo_adaptive_kl: Whether or not to use the Adaptive KL Penalty Coefficient
+            (default False)
     	epsilon_clip: Probability ratio clipping (default 0.2)
+        kl_coef: Starting KL penalty coefficient (default 1.)
+        kl_targ: KL target between old and new policy on each update (default 0.01)
+        kl_hinge_coef: Multiplier for the hinge loss on the KL divergence (default 50)
         normalize_advantages: Whether or not to normalize advantages (default False)
         use_baseline: Whether or not to subtract a baseline(NN representing the
             value function) from the returns (default True)
