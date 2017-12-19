@@ -1,9 +1,8 @@
+#TODO: needs updating
 import numpy as np
 import tensorflow as tf
-from model import DQNModel
+from models import DQNModel
 
-
-# TODO: Change print statements to asserts
 STATE_SHAPE = [84, 84, 4]
 NUM_ACTIONS = 3
 LEARNING_RATE = 1e-3
@@ -16,7 +15,6 @@ fake_target_states = np.random.randint(0, 255, size=[3] + STATE_SHAPE, dtype=np.
 # LEARNING_RATE = 1e-2
 # fake_states = np.random.random([3] + STATE_SHAPE)
 # fake_target_states = np.random.random([3] + STATE_SHAPE)
-
 
 fake_rewards = np.array([100, 100, 100])
 fake_dones = np.array([1, 1, 1])
@@ -35,13 +33,8 @@ for i_action in range(NUM_ACTIONS):
         old_preds = model.predict(sess, fake_states)
         print('Old predictions:\n', old_preds)
         for _ in range(100):
-            model.train(sess,
-                        LEARNING_RATE,
-                        fake_states,
-                        fake_target_states,
-                        fake_actions,
-                        fake_rewards,
-                        fake_dones)
+            model.train(sess, LEARNING_RATE, fake_states, fake_target_states,
+                        fake_actions, fake_rewards, fake_dones)
         new_preds = model.predict(sess, fake_states)
         print('New predictions:\n', new_preds)
 
