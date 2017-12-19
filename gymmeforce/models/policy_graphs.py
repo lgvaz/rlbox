@@ -29,7 +29,7 @@ def dense_policy_graph(inputs,
             mean = tf.layers.dense(
                 inputs=net,
                 units=env_config['num_actions'],
-                kernel_initializer=variance_scaling_initializer(factor=0.1),
+                kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                 name='mean',
                 trainable=trainable)
             logstd = tf.get_variable(
