@@ -23,7 +23,7 @@ Examples on how to run different agents can be found on the [examples](https://g
   * Adaptive KL Penalty Coefficient  
   
 ### Classical
-* Vanilla Policy Gradients
+* Vanilla Policy Gradient
 * REINFORCE
 * Actor-Critic
 
