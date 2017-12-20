@@ -12,6 +12,19 @@ pip install -e .
 ## How to use  
 Examples on how to run different agents can be found on the [examples](https://github.com/lgvaz/gymmeforce/tree/master/examples) folder.  
 
+## Implemented algorithms  
+### State of the art
+* [DQN](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf) and extensions
+  * [Double Q-learning](https://arxiv.org/pdf/1509.06461.pdf)  
+  * [Dueling networks](https://arxiv.org/pdf/1511.06581.pdf)
+  * N-step learning
+* [PPO](https://arxiv.org/pdf/1707.06347.pdf)
+  * Clipped Surrogate Objective  
+  * Adaptive KL Penalty Coefficient  
+  
+### Classical
+* Vanilla Policy Gradients
+* Actor-Critic
 
 ## About  
 [TensorFlow](https://www.tensorflow.org/) implementation of [DQN](https://www.nature.com/nature/journal/v518/n7540/full/nature14236.html?foxtrotcallback=true) for solving [OpenAI-Gym](https://gym.openai.com/) discrete environments.  
