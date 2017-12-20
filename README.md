@@ -18,6 +18,7 @@ Examples on how to run different agents can be found on the [examples](https://g
   * [Double Q-learning](https://arxiv.org/pdf/1509.06461.pdf)  
   * [Dueling networks](https://arxiv.org/pdf/1511.06581.pdf)
   * N-step learning
+  * Soft target update
 * [PPO](https://arxiv.org/pdf/1707.06347.pdf)
   * Clipped Surrogate Objective  
   * Adaptive KL Penalty Coefficient  
