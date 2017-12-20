@@ -24,6 +24,7 @@ Examples on how to run different agents can be found on the [examples](https://g
   
 ### Classical
 * Vanilla Policy Gradients
+* REINFORCE
 * Actor-Critic
 
 ## About  
