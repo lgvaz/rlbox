@@ -98,28 +98,17 @@ class VanillaPGAgent(BatchAgent):
         self.logger.log('Iter {} | Episode {} | Step {}'.format(
             self.i_iter, self.i_episode, self.i_step))
 
-    def train(self,
-              learning_rate,
-              gamma=0.99,
-              timesteps_per_batch=2000,
-              num_epochs=1,
-              batch_size=64,
-              **kwargs):
+    def train(self, learning_rate, gamma=0.99, **kwargs):
         self.learning_rate = learning_rate
         self.gamma = gamma
         super().train(**kwargs)
 
         while True:
             # Generate policy rollouts
-            batch = self.generate_batch(
-                ep_runner=self.train_ep_runner, timesteps_per_batch=timesteps_per_batch)
+            batch = self.generate_batch(ep_runner=self.train_ep_runner, **kwargs)
 
-            self.model.fit(
-                sess=self.sess,
-                batch=batch,
-                learning_rate=self.learning_rate,
-                num_epochs=num_epochs,
-                batch_size=batch_size)
+            lr = self._calculate_learning_rate()
+            self.model.fit(sess=self.sess, batch=batch, learning_rate=lr, **kwargs)
 
             self.write_logs(batch)
 

@@ -121,7 +121,7 @@ class VanillaPGModel(BaseModel):
     def compute_baseline(self, sess, states):
         return sess.run(self.baseline_sy, feed_dict={self.placeholders['states']: states})
 
-    def fit(self, sess, batch, learning_rate, num_epochs=10, batch_size=64):
+    def fit(self, sess, batch, learning_rate, num_epochs=10, batch_size=64, **kwargs):
         self._fetch_placeholders_data_dict(batch)
         data = DataGenerator(self.placeholders_and_data)
 

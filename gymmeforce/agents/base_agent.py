@@ -55,7 +55,8 @@ class BaseAgent:
         # TODO: where scaler should be? In base or batch agent?
         self.scaler = Scaler(self.env_config['state_shape']) if scale_states else None
 
-    def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None):
+    def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None,
+                    **kwargs):
         monitor_path = os.path.join(self.log_dir, monitor_dir)
         env = gym.make(self.env_name)
         if max_episode_steps is not None:
