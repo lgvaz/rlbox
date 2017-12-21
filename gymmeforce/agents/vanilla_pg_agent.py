@@ -38,7 +38,7 @@ class VanillaPGAgent(BatchAgent):
 
     def _add_advantages_and_vtarget(self, trajectory):
         if self.model.use_baseline:
-            # This is the classical way to fir vtarget (directly by the return)
+            # This is the classical way to fit vtarget (directly by the return)
             # TODO: Should a option to bootstrap be added?
             trajectory['baseline_target'] = trajectory['returns']
             trajectory['baseline'] = self.model.compute_baseline(
