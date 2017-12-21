@@ -149,3 +149,7 @@ class DQNAgent(ReplayAgent):
 
             if self._step_and_check_termination():
                 break
+
+    def play(self, exploration_rate=0.05, **kwargs):
+        self.exploration_rate = exploration_rate
+        super().play(**kwargs)

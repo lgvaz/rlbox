@@ -106,8 +106,7 @@ class BaseAgent:
     def select_action(self, state):
         raise NotImplementedError
 
-    def play(self, exploration_rate=0.05, render=True, record_freq=1, **kwargs):
-        self.exploration_rate = exploration_rate
+    def play(self, render=True, record_freq=1, **kwargs):
         self._maybe_create_tf_sess()
 
         # Create environment
