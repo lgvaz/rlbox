@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from gym import wrappers
 
-from gymmeforce.common.gym_utils import EpisodeRunner
+from gymmeforce.common.runner import EpisodeRunner
 from gymmeforce.common.print_utils import Logger
 from gymmeforce.common.utils import Scaler
 
