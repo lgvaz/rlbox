@@ -85,8 +85,10 @@ class BaseAgent:
         '''
         Creates a session and loads model from log_dir (if exists)
         '''
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
         if self.sess is None:
-            self.sess = tf.Session()
+            self.sess = tf.Session(config=config)
             self.model.load_or_initialize(self.sess)
 
     def _step_and_check_termination(self):
