@@ -47,11 +47,10 @@ class VanillaPGAgent(BatchAgent):
         else:
             trajectory['advantages'] = trajectory['returns']
 
-    def _normalize_advantages(self, trajectory):
-        mean_adv = np.mean(trajectory['advantages'])
-        std_adv = np.std(trajectory['advantages'])
-        trajectory['advantages'] = (trajectory['advantages'] - mean_adv) / (
-            std_adv + 1e-7)
+    def _normalize_advantages(self, batch):
+        mean_adv = np.mean(batch['advantages'])
+        std_adv = np.std(batch['advantages'])
+        batch['advantages'] = (batch['advantages'] - mean_adv) / (std_adv + 1e-7)
 
     def select_action(self, state):
         action = self.model.select_action(self.sess, state)
@@ -65,8 +64,6 @@ class VanillaPGAgent(BatchAgent):
         for trajectory in trajectories:
             self._add_discounted_returns(trajectory)
             self._add_advantages_and_vtarget(trajectory)
-            if self.normalize_advantages:
-                self._normalize_advantages(trajectory)
 
         batch = {
             'states':
@@ -85,6 +82,9 @@ class VanillaPGAgent(BatchAgent):
             'baseline_targets':
             np.concatenate([traj['baseline_target'] for traj in trajectories])
         }
+
+        if self.normalize_advantages:
+            self._normalize_advantages(batch)
 
         return batch
 
