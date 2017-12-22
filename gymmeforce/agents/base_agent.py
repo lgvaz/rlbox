@@ -132,13 +132,16 @@ class BaseAgent:
         self.max_episodes = max_episodes
         self.max_steps = max_steps
         self.i_iter = 0
-        self.i_episode = 0
+        self.i_episode = self.train_ep_runner.get_number_episodes()
         self.i_step = self.model.get_global_step(self.sess)
+        self.last_logged_ep = self.i_episode
 
     def write_logs(self, batch):
         ep_rewards = self.train_ep_runner.monitored_env.get_episode_rewards()
+        new_eps = abs(self.last_logged_ep - self.i_episode)
+        self.last_logged_ep = self.i_episode
 
-        self.logger.add_log('Reward/Episode (Last 50)', np.mean(ep_rewards[-50:]))
+        self.logger.add_log('Reward/Episode', np.mean(ep_rewards[-new_eps:]))
         self.model.write_logs(self.sess, self.logger)
         self.logger.add_log('Learning Rate', self._calculate_learning_rate(), precision=5)
         self.logger.timeit(self.i_step, max_steps=self.max_steps)
