@@ -54,6 +54,7 @@ class BaseModel:
                 grads_and_vars = [(tf.clip_by_norm(grad, self.grad_clip_norm), var)
                                   for grad, var in grads_and_vars if grad is not None]
 
+        tf.summary.histogram('gradients', grads_and_vars[0])
         self.training_op = optimizer.apply_gradients(grads_and_vars)
 
     def _create_summaries_op(self):
