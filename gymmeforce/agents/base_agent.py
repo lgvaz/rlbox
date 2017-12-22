@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from gym import wrappers
 
-from gymmeforce.common.gym_utils import EpisodeRunner
+from gymmeforce.common.runner import EpisodeRunner
 from gymmeforce.common.print_utils import Logger
 from gymmeforce.common.utils import Scaler
 
@@ -85,8 +85,10 @@ class BaseAgent:
         '''
         Creates a session and loads model from log_dir (if exists)
         '''
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
         if self.sess is None:
-            self.sess = tf.Session()
+            self.sess = tf.Session(config=config)
             self.model.load_or_initialize(self.sess)
 
     def _step_and_check_termination(self):
@@ -104,8 +106,7 @@ class BaseAgent:
     def select_action(self, state):
         raise NotImplementedError
 
-    def play(self, exploration_rate=0.05, render=True, record_freq=1, **kwargs):
-        self.exploration_rate = exploration_rate
+    def play(self, render=True, record_freq=1, **kwargs):
         self._maybe_create_tf_sess()
 
         # Create environment
@@ -131,13 +132,16 @@ class BaseAgent:
         self.max_episodes = max_episodes
         self.max_steps = max_steps
         self.i_iter = 0
-        self.i_episode = 0
+        self.i_episode = self.train_ep_runner.get_number_episodes()
         self.i_step = self.model.get_global_step(self.sess)
+        self.last_logged_ep = self.i_episode
 
     def write_logs(self, batch):
         ep_rewards = self.train_ep_runner.monitored_env.get_episode_rewards()
+        new_eps = abs(self.last_logged_ep - self.i_episode)
+        self.last_logged_ep = self.i_episode
 
-        self.logger.add_log('Reward/Episode (Last 50)', np.mean(ep_rewards[-50:]))
+        self.logger.add_log('Reward/Episode', np.mean(ep_rewards[-new_eps:]))
         self.model.write_logs(self.sess, self.logger)
         self.logger.add_log('Learning Rate', self._calculate_learning_rate(), precision=5)
         self.logger.timeit(self.i_step, max_steps=self.max_steps)

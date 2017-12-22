@@ -32,6 +32,7 @@ class BaseModel:
 
     def _maybe_create_writer(self):
         if self._writer is None:
+            print('Writing logs to: {}'.format(self.log_dir))
             self._writer = tf.summary.FileWriter(
                 self.log_dir, graph=tf.get_default_graph())
 

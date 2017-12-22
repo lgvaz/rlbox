@@ -28,11 +28,9 @@ class VanillaPGModel(BaseModel):
 
         if self.use_baseline:
             self.baseline_sy = self._create_baseline()
-            self.baseline_target = self.placeholders['returns']
 
         self._add_losses()
-        self._create_training_op(
-            self.placeholders['learning_rate'], opt_config=dict(epsilon=1e-5))
+        self._create_training_op(self.placeholders['learning_rate'], opt_config=dict())
 
     def _set_placeholders_config(self):
         ''' Modify this method to add new placeholders '''
@@ -41,6 +39,7 @@ class VanillaPGModel(BaseModel):
                        self.env_config['input_type']],
             'returns': [[None], tf.float32],
             'advantages': [[None], tf.float32],
+            'baseline_targets': [[None], tf.float32],
             'learning_rate': [[], tf.float32]
         }
         if self.env_config['action_space'] == 'discrete':
@@ -71,7 +70,8 @@ class VanillaPGModel(BaseModel):
         with tf.variable_scope('baseline_loss'):
             # This automatically adds the loss to the loss collection
             loss = tf.losses.mean_squared_error(
-                labels=self.baseline_target, predictions=self.baseline_sy)
+                labels=self.placeholders['baseline_targets'],
+                predictions=self.baseline_sy)
 
     def _create_baseline(self):
         return self.value_graph(self.placeholders['states'])
