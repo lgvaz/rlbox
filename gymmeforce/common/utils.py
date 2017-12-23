@@ -1,4 +1,5 @@
 import os
+import pickle
 import random
 from collections import deque
 
@@ -138,11 +139,12 @@ class Scaler(object):
     scale = 1 / (stddev + 0.1) / 3 (i.e. 3x stddev = +/- 1.0)
     """
 
-    def __init__(self, obs_dim):
+    def __init__(self, obs_dim, path=None):
         """
         Args:
             obs_dim: dimension of axis=1
         """
+        self.path = path
         self.vars = np.zeros(obs_dim)
         self.means = np.zeros(obs_dim)
         self.m = 0
@@ -181,6 +183,21 @@ class Scaler(object):
     def scale_state(self, state):
         scale, offset = self.get()
         return (state - offset) * scale
+
+    def save(self):
+        assert self.path is not None, 'You must define a path when creating this object'
+        with open(self.path, 'wb') as f:
+            pickle.dump(self.__dict__, f)
+
+    @classmethod
+    def initialize_or_load(cls, obs_dim, path=None):
+        scaler = cls(obs_dim, path)
+        if path is not None and os.path.exists(path):
+            with open(path, 'rb') as f:
+                attributes = pickle.load(f)
+                scaler.__dict__.update(attributes)
+
+        return scaler
 
 
 def strided_axis0(a, L):

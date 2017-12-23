@@ -29,11 +29,17 @@ class BaseAgent:
         self.play_ep_runner = None
         self.train_ep_runner = None
 
-        env = gym.make(env_name)
-        # Adds additional wrappers
-        if env_wrapper is not None:
-            env = env_wrapper.wrap_env(env)
+        self._create_env_config()
 
+        scaler_path = os.path.join(self.log_dir, 'scaler.pkl')
+        self.scaler = Scaler.initialize_or_load(self.env_config['state_shape'],
+                                                scaler_path) if scale_states else None
+
+    def _create_env_config(self):
+        env = gym.make(self.env_name)
+        # Adds additional wrappers
+        if self.env_wrapper is not None:
+            env = self.env_wrapper.wrap_env(env)
         # Get env information
         state = env.reset()
         self.env_config['state_shape'] = np.squeeze(state).shape
@@ -51,9 +57,6 @@ class BaseAgent:
             self.env_config['num_actions'] = env.action_space.shape[0]
             self.env_config['action_low_bound'] = env.action_space.low
             self.env_config['action_high_bound'] = env.action_space.high
-
-        # TODO: where scaler should be? In base or batch agent?
-        self.scaler = Scaler(self.env_config['state_shape']) if scale_states else None
 
     def _create_env(self, monitor_dir, record_freq=None, max_episode_steps=None,
                     **kwargs):
@@ -152,3 +155,5 @@ class BaseAgent:
 
     def save(self):
         self.model.save(self.sess)
+        if self.scaler is not None:
+            self.scaler.save()
