@@ -84,10 +84,12 @@ class PPOModel(VanillaPGModel):
 
             tf.losses.add_loss(clipped_surrogate_loss)
 
+        # Add logs
         clip_fraction = tf.reduce_mean(
             tf.to_float(
                 tf.abs(self.prob_ratio - 1.) > self.placeholders['ppo_clip_range']))
-        tf.summary.scalar('policy/clip_fraction', clip_fraction)
+        tf.summary.scalar('policy/ppo_clip_fraction', clip_fraction)
+        tf.summary.scalar('policy/ppo_clip_range', self.placeholders['ppo_clip_range'])
 
     def _kl_loss(self):
         with tf.variable_scope('kl_penalized_surrogate_loss'):
