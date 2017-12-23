@@ -10,14 +10,12 @@ class PPOModel(VanillaPGModel):
                  env_config,
                  ppo_clip=True,
                  ppo_adaptive_kl=False,
-                 epsilon_clip=0.2,
                  kl_coef=1.,
                  kl_targ=0.01,
                  kl_hinge_coef=50.,
                  **kwargs):
         self.ppo_clip = ppo_clip
         self.ppo_adaptive_kl = ppo_adaptive_kl
-        self.epsilon_clip = epsilon_clip
         self.kl_coef = tf.Variable(kl_coef, name='kl_coef', trainable=False)
         self.kl_targ = kl_targ
         self.kl_hinge_coef = kl_hinge_coef
@@ -39,6 +37,10 @@ class PPOModel(VanillaPGModel):
         self._create_old_policy_update_op()
         self._create_kl_divergence_op()
         self._create_surrogate_objective()
+
+    def _set_placeholders_config(self):
+        super()._set_placeholders_config()
+        self.placeholders_config['ppo_clip_range'] = [[], tf.float32]
 
     def _create_kl_divergence_op(self):
         self.kl_divergence_sy = self.policy.kl_divergence(self.old_policy, self.policy)
@@ -72,8 +74,8 @@ class PPOModel(VanillaPGModel):
 
             clipped_prob_ratio = tf.clip_by_value(
                 self.prob_ratio,
-                1 - self.epsilon_clip,
-                1 + self.epsilon_clip,
+                1 - self.placeholders['ppo_clip_range'],
+                1 + self.placeholders['ppo_clip_range'],
                 name='clipped_prob_ratio')
             clipped_surrogate = clipped_prob_ratio * self.placeholders['advantages']
 
@@ -83,7 +85,8 @@ class PPOModel(VanillaPGModel):
             tf.losses.add_loss(clipped_surrogate_loss)
 
         clip_fraction = tf.reduce_mean(
-            tf.to_float(tf.abs(self.prob_ratio - 1.) > self.epsilon_clip))
+            tf.to_float(
+                tf.abs(self.prob_ratio - 1.) > self.placeholders['ppo_clip_range']))
         tf.summary.scalar('policy/clip_fraction', clip_fraction)
 
     def _kl_loss(self):

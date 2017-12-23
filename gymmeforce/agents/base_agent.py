@@ -81,6 +81,14 @@ class BaseAgent:
 
         return lr
 
+    def _calculate_schedule(self, schedule):
+        if callable(schedule):
+            value = schedule(self.i_step)
+        else:
+            value = schedule
+
+        return value
+
     def _maybe_create_tf_sess(self):
         '''
         Creates a session and loads model from log_dir (if exists)

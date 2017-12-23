@@ -65,7 +65,7 @@ class VanillaPGAgent(BatchAgent):
             self._add_discounted_returns(trajectory)
             self._add_advantages_and_vtarget(trajectory)
 
-        batch = {
+        self.batch = {
             'states':
             np.concatenate([traj['states'] for traj in trajectories]),
             'actions':
@@ -84,9 +84,7 @@ class VanillaPGAgent(BatchAgent):
         }
 
         if self.normalize_advantages:
-            self._normalize_advantages(batch)
-
-        return batch
+            self._normalize_advantages(self.batch)
 
     def write_logs(self, batch):
         super().write_logs(batch)
@@ -105,12 +103,12 @@ class VanillaPGAgent(BatchAgent):
 
         while True:
             # Generate policy rollouts
-            batch = self.generate_batch(ep_runner=self.train_ep_runner, **kwargs)
+            self.generate_batch(ep_runner=self.train_ep_runner, **kwargs)
 
             lr = self._calculate_learning_rate()
-            self.model.fit(sess=self.sess, batch=batch, learning_rate=lr, **kwargs)
+            self.model.fit(sess=self.sess, batch=self.batch, learning_rate=lr, **kwargs)
 
-            self.write_logs(batch)
+            self.write_logs(self.batch)
 
             if self._step_and_check_termination():
                 break

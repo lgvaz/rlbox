@@ -38,3 +38,11 @@ class PPOAgent(ActorCriticAgent):
 
     def _create_model(self, **kwargs):
         return PPOModel(self.env_config, **kwargs)
+
+    def generate_batch(self, **kwargs):
+        super().generate_batch(**kwargs)
+        self.batch['ppo_clip_range'] = self._calculate_schedule(self.ppo_clip_range)
+
+    def train(self, ppo_clip_range, **kwargs):
+        self.ppo_clip_range = ppo_clip_range
+        super().train(**kwargs)
