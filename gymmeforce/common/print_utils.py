@@ -56,7 +56,7 @@ class Logger:
         steps, self.i_step = i_step - self.i_step, i_step
         new_time = time.time()
         steps_sec = steps / (new_time - self.time)
-        self.add_log('Steps/Second', steps_sec)
+        self.add_log('Steps_per_second', steps_sec)
         self.time = new_time
         self.steps_sum += steps
 
