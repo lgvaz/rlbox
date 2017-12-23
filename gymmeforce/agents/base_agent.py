@@ -73,14 +73,6 @@ class BaseAgent:
 
         return monitored_env, env
 
-    def _calculate_learning_rate(self):
-        if callable(self.learning_rate):
-            lr = self.learning_rate(self.i_step)
-        else:
-            lr = self.learning_rate
-
-        return lr
-
     def _calculate_schedule(self, schedule):
         if callable(schedule):
             value = schedule(self.i_step)
@@ -151,7 +143,8 @@ class BaseAgent:
 
         self.logger.add_log('Reward/Episode', np.mean(ep_rewards[-new_eps:]))
         self.model.write_logs(self.sess, self.logger)
-        self.logger.add_log('Learning Rate', self._calculate_learning_rate(), precision=5)
+        self.logger.add_log(
+            'Learning Rate', self._calculate_schedule(self.learning_rate), precision=5)
         self.logger.timeit(self.i_step, max_steps=self.max_steps)
 
     def update_scaler(self, states):

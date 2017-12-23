@@ -105,7 +105,7 @@ class VanillaPGAgent(BatchAgent):
             # Generate policy rollouts
             self.generate_batch(ep_runner=self.train_ep_runner, **kwargs)
 
-            lr = self._calculate_learning_rate()
+            lr = self._calculate_schedule(self.learning_rate)
             self.model.fit(sess=self.sess, batch=self.batch, learning_rate=lr, **kwargs)
 
             self.write_logs(self.batch)
