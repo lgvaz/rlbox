@@ -1,7 +1,7 @@
 import gym
 
 from gymmeforce.agents import DQNAgent
-from gymmeforce.common.utils import piecewise_linear_decay
+from gymmeforce.common.schedules import piecewise_linear_decay
 from gymmeforce.wrappers import AtariWrapper
 
 # Create gym enviroment
