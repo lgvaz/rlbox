@@ -20,13 +20,13 @@ class DiagGaussianDist:
     def selected_logprob(self, actions):
         logprob = -0.5 * tf.log(2 * np.pi) * self.num_actions
         logprob += -0.5 * tf.reduce_sum(self.logstd, axis=-1)
-        logprob += -0.5 * tf.reduce_sum(((actions - self.mean) / self.std) ** 2, axis=-1)
+        logprob += -0.5 * tf.reduce_sum(((actions - self.mean) / self.std)**2, axis=-1)
 
         return logprob
 
     def entropy(self):
-        entropy = 0.5 * (tf.reduce_sum(self.logstd)
-                         + tf.to_float(self.num_actions) * (tf.log(2 * np.pi * np.e)))
+        entropy = 0.5 * (tf.reduce_sum(self.logstd) + tf.to_float(self.num_actions) *
+                         (tf.log(2 * np.pi * np.e)))
         return entropy
 
     @staticmethod
@@ -35,17 +35,15 @@ class DiagGaussianDist:
         From https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence#Examples
         The terms are in order with the page
         '''
-        assert isinstance(old_dist, DiagGaussianDist) and isinstance(new_dist, DiagGaussianDist)
-        # first_term = tf.reduce_sum(tf.exp(old_dist.logstd - new_dist.logstd))
-        # second_term = tf.reduce_sum(((new_dist.mean - old_dist.mean) ** 2)
-        #                             / new_dist.std, axis=1)
-        # third_term = tf.to_float(new_dist.num_actions)
-        # fourth_term = tf.reduce_sum(new_dist.logstd) - tf.reduce_sum(old_dist.logstd)
+        assert isinstance(old_dist, DiagGaussianDist) and isinstance(
+            new_dist, DiagGaussianDist)
+        first_term = tf.reduce_sum(tf.exp(old_dist.logstd - new_dist.logstd))
+        second_term = tf.reduce_sum(
+            ((new_dist.mean - old_dist.mean)**2) / new_dist.std, axis=1)
+        third_term = tf.to_float(new_dist.num_actions)
+        fourth_term = tf.reduce_sum(new_dist.logstd) - tf.reduce_sum(old_dist.logstd)
 
-        # kl = 0.5 * (first_term + second_term - third_term + fourth_term)
-        # kl = tf.reduce_mean(kl)
+        kl = 0.5 * (first_term + second_term - third_term + fourth_term)
+        kl = tf.reduce_mean(kl)
 
-        # return kl
-
-        return tf.reduce_sum(new_dist.logstd - old_dist.logstd + (tf.square(old_dist.std) + tf.square(old_dist.mean - new_dist.mean)) / (2.0 * tf.square(new_dist.std)) - 0.5, axis=-1)
-
+        return kl

@@ -124,19 +124,6 @@ class PPOModel(VanillaPGModel):
     def _create_summaries_op(self):
         super()._create_summaries_op()
 
-        # tf.summary.histogram('policy/prob_ratio', self.prob_ratio)
-        # tf.summary.scalar('policy/prob_ratio/mean', tf.reduce_mean(self.prob_ratio))
-        # tf.summary.scalar('policy/prob_ratio/max', tf.reduce_max(self.prob_ratio))
-        # tf.summary.scalar('policy/prob_ratio/min', tf.reduce_min(self.prob_ratio))
-
-        # tf.summary.histogram('policy/clipped_prob_ratio', self.clipped_prob_ratio)
-        # tf.summary.scalar('policy/clipped_prob_ratio/mean',
-        #                   tf.reduce_mean(self.clipped_prob_ratio))
-        # tf.summary.scalar('policy/clipped_prob_ratio/max',
-        #                   tf.reduce_max(self.clipped_prob_ratio))
-        # tf.summary.scalar('policy/clipped_prob_ratio/min',
-        #                   tf.reduce_min(self.clipped_prob_ratio))
-
     def write_logs(self, sess, logger):
         entropy, kl = sess.run(
             [self.policy.entropy_sy, self.kl_divergence_sy],
