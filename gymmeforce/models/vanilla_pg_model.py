@@ -37,6 +37,7 @@ class VanillaPGModel(BaseModel):
         self.placeholders_config = {
             'states': [[None] + list(self.env_config['state_shape']),
                        self.env_config['input_type']],
+            'rewards': [[None], tf.float32],
             'returns': [[None], tf.float32],
             'advantages': [[None], tf.float32],
             'baseline_targets': [[None], tf.float32],
@@ -86,8 +87,11 @@ class VanillaPGModel(BaseModel):
 
     def _create_summaries_op(self):
         super()._create_summaries_op()
-        tf.summary.histogram('policy/logprob', self.policy.logprob_sy)
-        tf.summary.scalar('policy/logprob/mean', tf.reduce_mean(self.policy.logprob_sy))
+
+        tf.summary.histogram('env/rewards', self.placeholders['rewards'])
+
+        # tf.summary.histogram('policy/logprob', self.policy.logprob_sy)
+        # tf.summary.scalar('policy/logprob/mean', tf.reduce_mean(self.policy.logprob_sy))
 
         advantages = self.placeholders['advantages']
         tf.summary.histogram('advantages', advantages)
