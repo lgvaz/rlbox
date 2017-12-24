@@ -43,6 +43,6 @@ class PPOAgent(ActorCriticAgent):
         super().generate_batch(**kwargs)
         self.batch['ppo_clip_range'] = self._calculate_schedule(self.ppo_clip_range)
 
-    def train(self, ppo_clip_range, **kwargs):
+    def train(self, ppo_clip_range=0.2, **kwargs):
         self.ppo_clip_range = ppo_clip_range
         super().train(**kwargs)
