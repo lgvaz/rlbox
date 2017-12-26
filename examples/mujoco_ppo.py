@@ -1,50 +1,40 @@
 from gymmeforce.agents import PPOAgent
+from gymmeforce.common.schedules import piecewise_linear_decay
 
-env_name = 'HalfCheetah-v1'
-# log_dir = 'tests/hopper/ppo/adaptive_kl_50eta_earlystop_v0'
-# log_dir = 'logs/cheetah/ppo/baselinenet_adaptive_kl_scale_1000timesteps_v8'
-log_dir = 'logs/cheetah/ppo/baselinenet_clip_kl_scale_1000timesteps_v1'
-# log_dir = 'logs/lunar_lander/ppo/1e3lr_02clip_00entropy_na_ub_nb_2000batch_10epochs_v0'
-# log_dir = 'tests/hopper/ppo/3e4lr_02clip_00entropy_na_0.95lambda_2000batch_10epochs_v9'
-# log_dir = 'tests/cheetah/3e-4lr_02clip_00entropy_na_095lambda_400len_2000batch_10epochs_new_vtarg_v0'
+env_name = 'Hopper-v1'
+log_dir = 'logs_bench/hopper/ppo/02clip_v2_0'
+
+max_steps = 1e6
+# Optionally you can define schedules
+# learning_rate_schedule = piecewise_linear_decay(
+#     boundaries=[0.2 * max_steps, 0.6 * max_steps], values=[1, .5, .5], initial_value=3e-4)
+# clip_range_schedule = piecewise_linear_decay(
+#     boundaries=[0.1 * max_steps, 0.8 * max_steps], values=[1, .1, .1], initial_value=0.2)
 
 agent = PPOAgent(
     env_name,
     ppo_clip=True,
     ppo_adaptive_kl=False,
+    kl_targ=0.01,
+    # hinge_coef=1000,
     scale_states=True,
+    # grad_clip_norm=10,
     log_dir=log_dir,
-    epsilon_clip=0.2,
-    entropy_coef=0.0,
     normalize_advantages=True)
 
 agent.train(
-    3e-4,
-    # max_steps=1e6,
+    # learning_rate=learning_rate_schedule,
+    learning_rate=3e-4,
+    ppo_clip_range=0.2,
+    max_steps=max_steps,
     # max_iters=1e6,
-    max_episodes=3000,
+    # max_episodes=30000,
     # max_episode_steps=400,
-    timesteps_per_batch=5000,
-    gamma=0.99,
-    gae_lambda=0.95,
+    timesteps_per_batch=2048,
+    # episodes_per_batch=5,
+    # use_gae=False,
+    gamma=0.995,
+    gae_lambda=0.97,
     num_epochs=10,
     batch_size=64,
-    record_freq=50)
-
-# agent = PPOAgent(
-#     'InvertedDoublePendulum-v1',
-#     # log_dir='logs/lunar_lander/ppo/na_baseline_nb_entropy0_2000batch_10epochs_v2',
-#     log_dir='logs/inverted_double_pendulum/ppo/adaptive_kl_betaeta_v0',
-#     entropy_coef=0.0,
-#     normalize_advantages=True)
-
-# agent.train(
-#     3e-4,
-#     # max_iters=100,
-#     max_steps=5e5,
-#     use_gae=True,
-#     gamma=0.99,
-#     gae_lambda=0.95,
-#     timesteps_per_batch=3000,
-#     num_epochs=10,
-#     record_freq=None)
+    record_freq=400)
