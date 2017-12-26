@@ -28,16 +28,18 @@ Examples on how to run different agents can be found on the [examples](https://g
 * REINFORCE
 * Actor-Critic
 
-## About  
-[TensorFlow](https://www.tensorflow.org/) implementation of [DQN](https://www.nature.com/nature/journal/v518/n7540/full/nature14236.html?foxtrotcallback=true) for solving [OpenAI-Gym](https://gym.openai.com/) discrete environments.  
+## Results  
+* __DQN on BreakoutNoFrameskip-v4__  
 Episode 0 ---------------- Episode 3500 ----------- Episode 6000 ----------- Episode 7500 ----------- Episode 21500  
 ![episode 0](assets/ep0_nolegend.gif)
 ![episode 3500](assets/ep3500_nolegend.gif)
 ![episode 6000](assets/ep6000_nolegend.gif)
 ![episode 7500](assets/ep7500_nolegend.gif)
-![episode 21500](assets/ep21500_nolegend.gif)  
-**DQN on Breakout**  
+![episode 21500](assets/ep21500_nolegend.gif)   
 Mean reward after training: 421 (100 episodes)  
 Dark blue: Standard DQN  
 Light blue: Double DQN  
 ![Breakout reward](assets/breakout_plots.png)  
+
+* __PPO on Hopper-v1__ [Video](https://www.youtube.com/watch?v=QHAu8EWRJJ0&feature=youtu.be)  
+![Hopper reward](assets/ppo_reward.png)  
