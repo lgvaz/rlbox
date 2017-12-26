@@ -29,7 +29,7 @@ Examples on how to run different agents can be found on the [examples](https://g
 * Actor-Critic
 
 ## Results  
-### DQN on BreakoutNoFrameskip-v4  
+* __DQN on BreakoutNoFrameskip-v4__  
 Episode 0 ---------------- Episode 3500 ----------- Episode 6000 ----------- Episode 7500 ----------- Episode 21500  
 ![episode 0](assets/ep0_nolegend.gif)
 ![episode 3500](assets/ep3500_nolegend.gif)
@@ -41,5 +41,5 @@ Dark blue: Standard DQN
 Light blue: Double DQN  
 ![Breakout reward](assets/breakout_plots.png)  
 
-### PPO on Hopper-v1  
+* __PPO on Hopper-v1__ [Video](https://www.youtube.com/watch?v=QHAu8EWRJJ0&feature=youtu.be)  
 ![Hopper reward](assets/ppo_reward.png)  
