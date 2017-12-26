@@ -36,9 +36,6 @@ Episode 0 ---------------- Episode 3500 ----------- Episode 6000 ----------- Epi
 ![episode 6000](assets/ep6000_nolegend.gif)
 ![episode 7500](assets/ep7500_nolegend.gif)
 ![episode 21500](assets/ep21500_nolegend.gif)  
-<img src="assets/cart_pole.gif" width="280" height="200" />
-<img src="assets/acrobot.gif" width="280" height="200" />
-<img src="assets/lunar_lander.gif" width="280" height="200" />  
 **DQN on Breakout**  
 Mean reward after training: 421 (100 episodes)  
 Dark blue: Standard DQN  
