@@ -36,7 +36,7 @@ Episode 0 ---------------- Episode 3500 ----------- Episode 6000 ----------- Epi
 ![episode 6000](assets/ep6000_nolegend.gif)
 ![episode 7500](assets/ep7500_nolegend.gif)
 ![episode 21500](assets/ep21500_nolegend.gif)   
-Mean reward after training: 421 (100 episodes)  
+Mean reward after training: 421 (Averaged over 100 episodes)  
 Dark blue: Standard DQN  
 Light blue: Double DQN  
 ![Breakout reward](assets/breakout_plots.png)  
