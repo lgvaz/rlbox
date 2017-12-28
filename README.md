@@ -4,8 +4,8 @@ RLBox provides a framework for rapid experimentation with popular Deep Reinforce
 
 ## Installation
 ```bash
-git clone https://github.com/lgvaz/gymmeforce.git  
-cd gymmeforce  
+git clone https://github.com/apparatusbox/rlbox.git
+cd rlbox  
 pip install -e .  
 ```
 
