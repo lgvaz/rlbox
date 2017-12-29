@@ -6,7 +6,7 @@ from rlbox.common.schedules import piecewise_linear_decay
 env_name = 'LunarLander-v2'
 
 # Define learning rate and exploration schedule
-max_steps = 1e5
+max_steps = 3e5
 learning_rate_schedule = piecewise_linear_decay(
     boundaries=[0.1 * max_steps, 0.5 * max_steps], values=[1, .1, .1], initial_value=1e-3)
 exploration_rate = piecewise_linear_decay(
