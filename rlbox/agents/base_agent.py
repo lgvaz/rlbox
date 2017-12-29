@@ -5,9 +5,9 @@ import numpy as np
 import tensorflow as tf
 from gym import wrappers
 
-from gymmeforce.common.runner import EpisodeRunner
-from gymmeforce.common.print_utils import Logger
-from gymmeforce.common.utils import Scaler
+from rlbox.common.runner import EpisodeRunner
+from rlbox.common.print_utils import Logger
+from rlbox.common.utils import Scaler
 
 
 # TODO: Maybe wrap env outside of class??

@@ -1,5 +1,5 @@
-from gymmeforce.agents import PPOAgent
-from gymmeforce.common.schedules import piecewise_linear_decay
+from rlbox.agents import PPOAgent
+from rlbox.common.schedules import piecewise_linear_decay
 
 env_name = 'Hopper-v1'
 log_dir = 'logs_bench/hopper/ppo/02clip_v2_0'

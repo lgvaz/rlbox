@@ -1,4 +1,4 @@
-from gymmeforce.agents import ActorCriticAgent
+from rlbox.agents import ActorCriticAgent
 
 agent = ActorCriticAgent(
     'InvertedPendulum-v1',

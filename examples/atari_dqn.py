@@ -1,8 +1,8 @@
 import gym
 
-from gymmeforce.agents import DQNAgent
-from gymmeforce.common.schedules import piecewise_linear_decay
-from gymmeforce.wrappers import AtariWrapper
+from rlbox.agents import DQNAgent
+from rlbox.common.schedules import piecewise_linear_decay
+from rlbox.wrappers import AtariWrapper
 
 # Create gym enviroment
 env_name = 'SpaceInvadersNoFrameskip-v4'

@@ -6,3 +6,5 @@ eggs/
 *.egg
 *logs/
 *tests/
+*logs_bench/
+.directory

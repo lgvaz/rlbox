@@ -1,8 +1,8 @@
 import numpy as np
 
-from gymmeforce.agents import BatchAgent
-from gymmeforce.common.utils import discounted_sum_rewards, explained_variance
-from gymmeforce.models import VanillaPGModel
+from rlbox.agents import BatchAgent
+from rlbox.common.utils import discounted_sum_rewards, explained_variance
+from rlbox.models import VanillaPGModel
 
 
 class VanillaPGAgent(BatchAgent):
