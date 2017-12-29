@@ -59,26 +59,25 @@ class DQNModel(BaseModel):
             'learning_rate': [[], tf.float32]
         }
 
+    def _get_graph_config(self):
+        graph_config = dict(
+            output_size=self.env_config['num_actions'], dueling=self.dueling)
+
+        return graph_config
+
     def _create_graphs(self):
-        if tf.uint8 == self.env_config['input_type']:
-            # Convert to float on GPU
-            states_t = tf.cast(self.placeholders['states_t'], tf.float32) / 255.
-            states_tp1 = tf.cast(self.placeholders['states_tp1'], tf.float32) / 255.
-        else:
-            states_t = self.placeholders['states_t']
-            states_tp1 = self.placeholders['states_tp1']
+        graph_config = self._get_graph_config()
 
         self.q_online_t = self.graph(
-            states_t, self.env_config['num_actions'], 'online', dueling=self.dueling)
+            states=self.placeholders['states_t'], scope='online', **graph_config)
         self.q_target_tp1 = self.graph(
-            states_tp1, self.env_config['num_actions'], 'target', dueling=self.dueling)
+            states=self.placeholders['states_tp1'], scope='target', **graph_config)
         if self.double:
             self.q_online_tp1 = self.graph(
-                states_tp1,
-                self.env_config['num_actions'],
-                'online',
-                dueling=self.dueling,
-                reuse=True)
+                states=self.placeholders['states_tp1'],
+                scope='online',
+                reuse=True,
+                **graph_config)
 
     def _build_optimization(self):
         # Choose only the q values for selected actions
@@ -98,6 +97,7 @@ class DQNModel(BaseModel):
                      (self.gamma**self.placeholders['n_step']) * q_tp1)
         tf.losses.huber_loss(labels=td_target, predictions=q_t)
 
+        # TODO: This probably should be in init
         # Create training operation
         opt_config = dict(epsilon=1e-4)
         online_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='online')
