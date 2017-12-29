@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-from gymmeforce.common.utils import tf_copy_params_op
-from gymmeforce.models.base_model import BaseModel
-from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
+from rlbox.common.utils import tf_copy_params_op
+from rlbox.models.base_model import BaseModel
+from rlbox.models.q_graphs import deepmind_graph, simple_graph
 
 
 class DQNModel(BaseModel):

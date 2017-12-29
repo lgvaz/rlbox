@@ -1,5 +1,5 @@
-from gymmeforce.agents import ActorCriticAgent
-from gymmeforce.models import PPOModel
+from rlbox.agents import ActorCriticAgent
+from rlbox.models import PPOModel
 
 
 class PPOAgent(ActorCriticAgent):

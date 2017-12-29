@@ -1,6 +1,6 @@
 import gym
-from gymmeforce.agents import DQNAgent
-from gymmeforce.common.schedules import piecewise_linear_decay
+from rlbox.agents import DQNAgent
+from rlbox.common.schedules import piecewise_linear_decay
 
 # Create gym enviroment
 env_name = 'LunarLander-v2'
@@ -17,7 +17,7 @@ exploration_rate = piecewise_linear_decay(
 # Create agent
 agent = DQNAgent(
     env_name=env_name,
-    log_dir='logs/lunar_lander/random_10n_step_uncareful_sample_softtarget_v0_12',
+    log_dir='logs/lunar_lander/random_10n_step_uncareful_sample_softtarget_v1_12',
     history_length=1,
     double=True,
     dueling=True,

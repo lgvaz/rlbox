@@ -10,7 +10,7 @@ pip install -e .
 ```
 
 ## How to use  
-Examples on how to run different agents can be found on the [examples](https://github.com/lgvaz/gymmeforce/tree/master/examples) folder.  
+Examples on how to run different agents can be found on the [examples](https://github.com/lgvaz/rlbox/tree/master/examples) folder.  
 
 ## Implemented algorithms  
 ### State of the art

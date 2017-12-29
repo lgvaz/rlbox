@@ -1,11 +1,11 @@
 import numpy as np
 import tensorflow as tf
 
-from gymmeforce.common.data_gen import DataGenerator
-from gymmeforce.common.policy import Policy
-from gymmeforce.models.base_model import BaseModel
-from gymmeforce.models.policy_graphs import dense_policy_graph
-from gymmeforce.models.value_graphs import dense_value_graph
+from rlbox.common.data_gen import DataGenerator
+from rlbox.common.policy import Policy
+from rlbox.models.base_model import BaseModel
+from rlbox.models.policy_graphs import dense_policy_graph
+from rlbox.models.value_graphs import dense_value_graph
 
 
 class VanillaPGModel(BaseModel):

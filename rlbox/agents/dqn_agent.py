@@ -1,8 +1,8 @@
 import numpy as np
 
-from gymmeforce.agents import ReplayAgent
-from gymmeforce.common.utils import calculate_n_step_return
-from gymmeforce.models import DQNModel
+from rlbox.agents import ReplayAgent
+from rlbox.common.utils import calculate_n_step_return
+from rlbox.models import DQNModel
 
 
 class DQNAgent(ReplayAgent):
@@ -87,7 +87,7 @@ class DQNAgent(ReplayAgent):
             n_step: Number of steps to use reward before bootstraping
             learning_rate: Float or a function that returns a float
                            when called with the current time step as input
-                           (see gymmeforce.utils.linear_decay as an example)
+                           (see rlbox.utils.linear_decay as an example)
             exploration_rate:     Float or function that returns a float when
                                   called with the current time step as input
                                   (see utils.linear_decay as an example)

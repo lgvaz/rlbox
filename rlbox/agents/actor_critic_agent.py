@@ -1,7 +1,7 @@
 import numpy as np
 
-from gymmeforce.agents import VanillaPGAgent
-from gymmeforce.common.utils import discounted_sum_rewards
+from rlbox.agents import VanillaPGAgent
+from rlbox.common.utils import discounted_sum_rewards
 
 
 class ActorCriticAgent(VanillaPGAgent):

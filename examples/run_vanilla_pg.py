@@ -1,4 +1,4 @@
-from gymmeforce.agents import VanillaPGAgent
+from rlbox.agents import VanillaPGAgent
 
 agent = VanillaPGAgent(
     'CartPole-v0',

@@ -1,6 +1,6 @@
 import numpy as np
 
-from gymmeforce.agents import BaseAgent
+from rlbox.agents import BaseAgent
 
 
 class BatchAgent(BaseAgent):

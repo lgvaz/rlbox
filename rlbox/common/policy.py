@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from gymmeforce.common.distributions import CategoricalDist, DiagGaussianDist
+from rlbox.common.distributions import CategoricalDist, DiagGaussianDist
 
 
 class Policy:

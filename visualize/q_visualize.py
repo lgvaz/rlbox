@@ -1,17 +1,25 @@
 import numpy as np
-from gymmeforce.agents import DQNAgent
-from gymmeforce.common.utils import discounted_sum_rewards
+from rlbox.agents import DQNAgent
+from rlbox.common.utils import discounted_sum_rewards
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 plt.style.use('ggplot')
 
+
 class DQNVisualize(DQNAgent):
-    def __init__(self, env_name, log_dir, history_length=4, graph=None,
-                 input_type=None, double=False, dueling=False, env_wrapper=None):
+    def __init__(self,
+                 env_name,
+                 log_dir,
+                 history_length=4,
+                 graph=None,
+                 input_type=None,
+                 double=False,
+                 dueling=False,
+                 env_wrapper=None):
         # TODO: Assert that log_dir already exists
-        super(DQNVisualize, self).__init__(env_name, log_dir, history_length,
-                                           graph, input_type, double, dueling, env_wrapper)
+        super(DQNVisualize, self).__init__(env_name, log_dir, history_length, graph,
+                                           input_type, double, dueling, env_wrapper)
         # Create enviroment
         self.monitored_env, self.env = self._create_env(env_name)
         self.state = self.env.reset()
@@ -106,17 +114,19 @@ class DQNVisualize(DQNAgent):
 
         return fig, animate
 
+
 if __name__ == '__main__':
-    from gymmeforce.wrappers import wrap_deepmind
+    from rlbox.wrappers import wrap_deepmind
 
     # Specify gym enviroment
     env_name = 'SpaceInvadersNoFrameskip-v4'
 
     # Create agent
-    agent = DQNVisualize(env_name=env_name,
-                         log_dir='../examples/logs/space_invaders/dueling_ddqn_v0_2',
-                         double=True,
-                         dueling=True,
-                         env_wrapper=wrap_deepmind)
+    agent = DQNVisualize(
+        env_name=env_name,
+        log_dir='../examples/logs/space_invaders/dueling_ddqn_v0_2',
+        double=True,
+        dueling=True,
+        env_wrapper=wrap_deepmind)
 
     agent.visualize()

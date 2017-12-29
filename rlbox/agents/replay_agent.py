@@ -1,5 +1,5 @@
-from gymmeforce.agents.base_agent import BaseAgent
-from gymmeforce.common.utils import ReplayBuffer, RingBuffer
+from rlbox.agents.base_agent import BaseAgent
+from rlbox.common.utils import ReplayBuffer, RingBuffer
 
 
 class ReplayAgent(BaseAgent):

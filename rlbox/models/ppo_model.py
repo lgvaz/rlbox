@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from gymmeforce.common.policy import Policy
-from gymmeforce.models import VanillaPGModel
-from gymmeforce.common.utils import tf_copy_params_op
+from rlbox.common.policy import Policy
+from rlbox.models import VanillaPGModel
+from rlbox.common.utils import tf_copy_params_op
 
 
 class PPOModel(VanillaPGModel):

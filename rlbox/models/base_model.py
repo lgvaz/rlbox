@@ -2,7 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from collections import defaultdict
-from gymmeforce.models.q_graphs import deepmind_graph, simple_graph
+from rlbox.models.q_graphs import deepmind_graph, simple_graph
 
 
 class BaseModel:
